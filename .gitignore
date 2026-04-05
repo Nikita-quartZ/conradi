@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Backend
+backend/uploads/products/*
+!backend/uploads/products/.gitkeep
+backend/instance/
+
+tests-e2e/

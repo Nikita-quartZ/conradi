@@ -1,0 +1,111 @@
+@use "variables" as *;
+
+:root {
+  --color-primary: #{$primary};
+  --color-primary-dark: #{$primary-dark};
+  --color-primary-light: #{$primary-light};
+  --color-secondary: #{$secondary};
+  --color-secondary-dark: #{$secondary-dark};
+  --color-text: #{$text};
+  --color-text-muted: #{$text-muted};
+  --color-surface: #{$surface};
+  --color-surface-alt: #{$surface-alt};
+  --color-border: #{$border};
+
+  --font-display: #{$font-display};
+  --font-body: #{$font-body};
+
+  --radius: #{$radius};
+  --radius-lg: #{$radius-lg};
+  --container: #{$container};
+
+  --p-primary-50: #f6f0ef;
+  --p-primary-100: #ebdcd9;
+  --p-primary-200: #d7b8b2;
+  --p-primary-300: #c2a8a4;
+  --p-primary-400: #b1928d;
+  --p-primary-500: #{$primary};
+  --p-primary-600: #{$primary-dark};
+  --p-primary-700: #6e544f;
+  --p-primary-800: #56403c;
+  --p-primary-900: #3d2c29;
+  --p-primary-color: #{$primary};
+  --p-primary-contrast-color: #ffffff;
+  --p-primary-hover-color: #{$primary-dark};
+  --p-primary-active-color: #{$primary-dark};
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--color-text);
+  margin: 0 0 0.5em;
+}
+
+h1 {
+  font-size: clamp(2.4rem, 4vw, 3.6rem);
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: clamp(1.8rem, 2.6vw, 2.4rem);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--color-primary);
+  }
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button {
+  font-family: inherit;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  padding: 0 24px;
+  margin: 0 auto;
+}
+
+.p-button {
+  font-family: var(--font-body);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-radius: var(--radius);
+}
