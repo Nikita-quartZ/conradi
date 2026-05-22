@@ -1,0 +1,54 @@
+services:
+  mysql:
+    image: mysql:8.2
+    container_name: conradi-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: conradi
+      MYSQL_USER: conradi
+      MYSQL_PASSWORD: conradi
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: conradi-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+pymysql://conradi:conradi@mysql:3306/conradi?charset=utf8mb4
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-please-change-me-to-a-long-random-string-32-bytes}
+      JWT_ACCESS_TOKEN_EXPIRES_HOURS: 24
+      UPLOAD_FOLDER: /app/uploads/products
+      MAX_CONTENT_LENGTH_MB: 8
+      CORS_ORIGINS: http://localhost,http://localhost:3000
+      ADMIN_LOGIN: admin
+      ADMIN_PASSWORD: admin123
+    volumes:
+      - uploads:/app/uploads/products
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: conradi-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  uploads:
