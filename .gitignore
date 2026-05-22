@@ -18,8 +18,6 @@ dist/
 .DS_Store
 
 # Backend
-backend/uploads/products/*
-!backend/uploads/products/.gitkeep
 backend/instance/
 
 tests-e2e/

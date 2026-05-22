@@ -2,7 +2,7 @@ import os
 from flask import Flask, send_from_directory, jsonify
 
 from config import Config
-from .extensions import db, migrate, jwt, cors, bcrypt
+from .extensions import db, jwt, cors, bcrypt
 
 
 def create_app(config_class=Config):
@@ -12,7 +12,6 @@ def create_app(config_class=Config):
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
     db.init_app(app)
-    migrate.init_app(app, db)
     jwt.init_app(app)
     bcrypt.init_app(app)
     cors.init_app(
@@ -25,6 +24,9 @@ def create_app(config_class=Config):
     from .cli import register_cli
 
     register_cli(app)
+
+    with app.app_context():
+        db.create_all()
 
     from .routes.auth import bp as auth_bp
     from .routes.catalog import bp as catalog_bp
