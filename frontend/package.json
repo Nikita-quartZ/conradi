@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "rm -rf node_modules/.vite && vite",
+    "build": "rm -rf dist node_modules/.vite && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

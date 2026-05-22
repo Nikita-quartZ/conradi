@@ -101,6 +101,24 @@ button {
   max-width: var(--container);
   padding: 0 24px;
   margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .container {
+    padding: 0 12px;
+  }
+}
+
+html,
+body {
+  overflow-x: hidden;
 }
 
 .p-button {

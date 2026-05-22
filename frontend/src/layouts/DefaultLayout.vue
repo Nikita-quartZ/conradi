@@ -393,18 +393,29 @@ watch(
 @media (max-width: 768px) {
   .header {
     &__inner {
-      gap: 12px;
-      height: 64px;
+      gap: 8px;
+      height: 60px;
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
     }
 
     &__burger {
       display: flex;
+      width: 36px;
+      height: 36px;
     }
 
     &__logo {
-      font-size: 1.5rem;
-      flex: 1;
-      text-align: center;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.4rem;
+      max-width: 50%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: auto;
     }
 
     &__nav {
@@ -462,12 +473,25 @@ watch(
     }
 
     &__actions {
-      gap: 4px;
+      gap: 2px;
     }
 
     &__icon {
-      width: 38px;
-      height: 38px;
+      width: 36px;
+      height: 36px;
+
+      i {
+        font-size: 1rem;
+      }
+    }
+
+    &__badge {
+      top: 2px;
+      right: 2px;
+      min-width: 16px;
+      height: 16px;
+      line-height: 16px;
+      font-size: 0.65rem;
     }
   }
 }
@@ -477,14 +501,55 @@ watch(
     grid-template-columns: 1fr;
   }
 
-  .header__login,
-  .header__register {
-    padding: 8px 12px;
-    font-size: 0.85rem;
-  }
+  .header {
+    &__inner {
+      height: 56px;
+    }
 
-  .header__login {
-    display: none;
+    &__logo {
+      font-size: 1.25rem;
+    }
+
+    &__icon {
+      width: 34px;
+      height: 34px;
+    }
+
+    &__login,
+    &__register {
+      padding: 6px 10px;
+      font-size: 0.8rem;
+    }
+
+    &__login {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 380px) {
+  .header {
+    &__inner {
+      gap: 4px;
+    }
+
+    &__burger {
+      width: 32px;
+      height: 32px;
+    }
+
+    &__logo {
+      font-size: 1.15rem;
+    }
+
+    &__icon {
+      width: 32px;
+      height: 32px;
+
+      i {
+        font-size: 0.95rem;
+      }
+    }
   }
 }
 

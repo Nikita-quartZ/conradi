@@ -12,9 +12,17 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      Pragma: "no-cache",
+      Expires: "0",
+    },
     proxy: {
       "/api": "http://localhost:5050",
       "/uploads": "http://localhost:5050",
     },
+  },
+  optimizeDeps: {
+    force: true,
   },
 });
