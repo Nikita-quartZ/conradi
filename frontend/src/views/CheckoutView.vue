@@ -408,5 +408,30 @@ onMounted(async () => {
   .checkout__layout {
     grid-template-columns: 1fr;
   }
+
+  .checkout__summary {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .checkout {
+    padding: 24px 0 56px;
+  }
+
+  .checkout__form h1 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+  }
+
+  .form-section,
+  .checkout__summary {
+    padding: 20px;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 </style>

@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted, ref } from "vue";
-import { RouterLink, useRouter } from "vue-router";
+import { onMounted, ref, watch } from "vue";
+import { RouterLink, useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useCartStore } from "@/stores/cart";
 import { useFavoritesStore } from "@/stores/favorites";
@@ -10,8 +10,14 @@ const auth = useAuthStore();
 const cart = useCartStore();
 const favorites = useFavoritesStore();
 const router = useRouter();
+const route = useRoute();
 
 const userMenu = ref(null);
+const mobileNavOpen = ref(false);
+
+watch(() => route.fullPath, () => {
+  mobileNavOpen.value = false;
+});
 
 const userMenuItems = [
   { label: "Личный кабинет", icon: "pi pi-user", command: () => router.push("/account") },
@@ -57,12 +63,27 @@ onMounted(async () => {
   <div class="layout">
     <header class="header">
       <div class="container header__inner">
+        <button
+          class="header__burger"
+          :class="{ 'header__burger--open': mobileNavOpen }"
+          @click="mobileNavOpen = !mobileNavOpen"
+          aria-label="Меню"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
         <RouterLink to="/" class="header__logo">Conradi</RouterLink>
-        <nav class="header__nav">
+        <nav class="header__nav" :class="{ 'header__nav--open': mobileNavOpen }">
           <RouterLink to="/catalog" class="header__link">Каталог</RouterLink>
           <RouterLink to="/about" class="header__link">О нас</RouterLink>
           <RouterLink to="/delivery" class="header__link">Доставка</RouterLink>
         </nav>
+        <div
+          v-if="mobileNavOpen"
+          class="header__overlay"
+          @click="mobileNavOpen = false"
+        ></div>
         <div class="header__actions">
           <template v-if="auth.isAuthenticated">
             <RouterLink to="/favorites" class="header__icon" aria-label="Избранное">
@@ -142,6 +163,45 @@ onMounted(async () => {
     justify-content: space-between;
     height: 80px;
     gap: 32px;
+    position: relative;
+  }
+
+  &__burger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    z-index: 60;
+
+    span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--color-text);
+      margin: 0 auto;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      transform-origin: center;
+    }
+
+    &--open span:nth-child(1) {
+      transform: translateY(7px) rotate(45deg);
+    }
+    &--open span:nth-child(2) {
+      opacity: 0;
+    }
+    &--open span:nth-child(3) {
+      transform: translateY(-7px) rotate(-45deg);
+    }
+  }
+
+  &__overlay {
+    display: none;
   }
 
   &__logo {
@@ -312,6 +372,120 @@ onMounted(async () => {
     padding-top: 24px;
     color: var(--color-text-muted);
     font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .footer__inner {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    &__inner {
+      gap: 12px;
+      height: 64px;
+    }
+
+    &__burger {
+      display: flex;
+    }
+
+    &__logo {
+      font-size: 1.5rem;
+      flex: 1;
+      text-align: center;
+    }
+
+    &__nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: min(80vw, 320px);
+      background: var(--color-surface);
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      padding: 88px 24px 24px;
+      gap: 0;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      z-index: 55;
+      box-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+      &--open {
+        transform: translateX(0);
+      }
+    }
+
+    &__link {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 1rem;
+
+      &.router-link-active::after {
+        display: none;
+      }
+      &.router-link-active {
+        color: var(--color-primary);
+      }
+    }
+
+    &__overlay {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(42, 33, 32, 0.4);
+      z-index: 54;
+      animation: fade-in 0.2s ease;
+    }
+
+    &__login,
+    &__register {
+      display: none;
+    }
+
+    &__login + .header__register,
+    &__register {
+      display: inline-block;
+    }
+
+    &__actions {
+      gap: 4px;
+    }
+
+    &__icon {
+      width: 38px;
+      height: 38px;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .footer__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .header__login,
+  .header__register {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  .header__login {
+    display: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 </style>

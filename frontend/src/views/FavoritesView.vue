@@ -243,4 +243,15 @@ onMounted(load);
     font-size: 0.85rem;
   }
 }
+
+@media (max-width: 600px) {
+  .favorites {
+    padding: 24px 0 56px;
+
+    &__grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  }
+}
 </style>

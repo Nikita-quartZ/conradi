@@ -358,6 +358,47 @@ watch(() => route.params.id, load);
 @media (max-width: 900px) {
   .product-page__grid {
     grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 600px) {
+  .product-page {
+    padding: 24px 0 56px;
+  }
+
+  .info {
+    gap: 16px;
+
+    &__price {
+      font-size: 1.8rem;
+    }
+
+    &__cta {
+      gap: 8px;
+    }
+
+    &__add {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    &__description {
+      padding: 20px;
+    }
+
+    &__rate {
+      padding: 16px 20px;
+    }
+  }
+
+  .gallery__thumbs {
+    overflow-x: auto;
+    padding-bottom: 4px;
+
+    button {
+      flex-shrink: 0;
+    }
   }
 }
 </style>

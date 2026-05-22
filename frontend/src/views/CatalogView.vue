@@ -30,6 +30,7 @@ const filters = ref({
 
 const page = ref(Number(route.query.page) || 1);
 const perPage = ref(12);
+const filtersOpen = ref(false);
 
 const sortOptions = [
   { value: "newest", label: "Сначала новые" },
@@ -68,6 +69,7 @@ async function loadProducts() {
 function applyFilters() {
   page.value = 1;
   loadProducts();
+  filtersOpen.value = false;
 }
 
 function resetFilters() {
@@ -118,8 +120,18 @@ watch(
         <p>Всего {{ total }} {{ total === 1 ? "товар" : "товаров" }}</p>
       </header>
 
+      <button class="catalog__filter-btn" @click="filtersOpen = true">
+        <i class="pi pi-filter" /> Фильтры
+      </button>
+
       <div class="catalog__layout">
-        <aside class="catalog__sidebar">
+        <aside
+          class="catalog__sidebar"
+          :class="{ 'catalog__sidebar--open': filtersOpen }"
+        >
+          <button class="catalog__filter-close" @click="filtersOpen = false" aria-label="Закрыть">
+            <i class="pi pi-times" />
+          </button>
           <div class="filter-block">
             <h3>Категория</h3>
             <ul class="filter-list">
@@ -175,6 +187,12 @@ watch(
 
           <Button label="Сбросить" text @click="resetFilters" />
         </aside>
+
+        <div
+          v-if="filtersOpen"
+          class="catalog__filter-overlay"
+          @click="filtersOpen = false"
+        ></div>
 
         <div class="catalog__main">
           <div class="catalog__toolbar">
@@ -347,9 +365,116 @@ watch(
   }
 }
 
+.catalog__filter-btn {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 16px;
+
+  i {
+    color: var(--color-primary);
+  }
+}
+
+.catalog__filter-close {
+  display: none;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--color-secondary);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 1rem;
+    color: var(--color-text);
+  }
+}
+
+.catalog__filter-overlay {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .catalog__layout {
     grid-template-columns: 1fr;
+  }
+
+  .catalog__filter-btn {
+    display: inline-flex;
+  }
+
+  .catalog__sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(85vw, 360px);
+    background: var(--color-surface-alt);
+    padding: 64px 20px 20px;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 60;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+    &--open {
+      transform: translateX(0);
+    }
+  }
+
+  .catalog__filter-close {
+    display: inline-flex;
+  }
+
+  .catalog__filter-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(42, 33, 32, 0.4);
+    z-index: 59;
+  }
+}
+
+@media (max-width: 600px) {
+  .catalog {
+    padding: 32px 0 56px;
+
+    &__head {
+      margin-bottom: 24px;
+
+      h1 {
+        font-size: 2rem;
+      }
+    }
+
+    &__toolbar {
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 24px;
+
+      :deep(.p-select) {
+        min-width: 0;
+        width: 100%;
+      }
+    }
+
+    &__grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
   }
 }
 </style>

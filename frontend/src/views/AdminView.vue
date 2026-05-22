@@ -108,4 +108,38 @@ const tabs = [
     padding: 32px;
   }
 }
+
+@media (max-width: 768px) {
+  .admin {
+    padding: 24px 0 56px;
+
+    &__head {
+      margin-bottom: 24px;
+
+      h1 {
+        font-size: 1.8rem;
+      }
+    }
+
+    &__tabs {
+      width: 100%;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    &__tab {
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    &__panel {
+      padding: 16px;
+      overflow-x: auto;
+    }
+  }
+}
 </style>

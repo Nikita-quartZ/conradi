@@ -247,4 +247,35 @@ onMounted(load);
     font-weight: 600;
   }
 }
+
+@media (max-width: 600px) {
+  .orders {
+    padding: 24px 0 56px;
+  }
+
+  .order {
+    padding: 16px;
+
+    &__head {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    &__meta {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    &__items {
+      padding: 12px;
+    }
+
+    &__item {
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px 0;
+    }
+  }
+}
 </style>

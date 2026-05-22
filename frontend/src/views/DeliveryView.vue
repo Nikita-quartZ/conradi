@@ -339,4 +339,36 @@ const steps = [
     text-align: left;
   }
 }
+
+@media (max-width: 600px) {
+  .delivery-hero {
+    padding: 48px 0 64px;
+
+    &__visual {
+      height: 280px;
+    }
+  }
+
+  .zones,
+  .how,
+  .faq {
+    padding: 64px 0;
+  }
+
+  .zones__row {
+    padding: 16px 20px;
+  }
+
+  .how__step {
+    padding: 24px 20px;
+  }
+
+  .faq__item {
+    padding: 16px 20px;
+
+    summary {
+      font-size: 0.95rem;
+    }
+  }
+}
 </style>

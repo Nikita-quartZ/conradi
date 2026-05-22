@@ -178,5 +178,29 @@ function fmtDate(d) {
   .account__layout {
     grid-template-columns: 1fr;
   }
+
+  .account__sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .account {
+    padding: 24px 0 56px;
+  }
+
+  .account__main h1 {
+    font-size: 1.8rem;
+  }
+
+  .account__card {
+    padding: 20px;
+  }
+
+  .account__row {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
 }
 </style>

@@ -5,6 +5,8 @@ services:
       dockerfile: backend/Dockerfile
     container_name: conradi-backend
     restart: unless-stopped
+    ports:
+      - "5050:5050"
     environment:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-please-change-me-to-a-long-random-string-32-bytes}
 

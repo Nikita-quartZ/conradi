@@ -365,4 +365,49 @@ onMounted(() => {
     height: 360px;
   }
 }
+
+@media (max-width: 600px) {
+  .hero {
+    padding: 48px 0 64px;
+
+    &__media {
+      height: 240px;
+      gap: 8px;
+    }
+
+    &__cta {
+      flex-direction: column;
+      align-items: stretch;
+
+      :deep(.p-button) {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+
+  .categories {
+    padding: 64px 0;
+
+    &__grid {
+      gap: 16px;
+    }
+  }
+
+  .category-card__image {
+    height: 180px;
+  }
+
+  .promise {
+    padding: 48px 0;
+
+    &__inner {
+      gap: 32px;
+    }
+  }
+
+  .section-head {
+    margin-bottom: 32px;
+  }
+}
 </style>

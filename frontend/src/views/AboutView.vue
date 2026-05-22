@@ -305,4 +305,46 @@ const values = [
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+@media (max-width: 600px) {
+  .about-hero {
+    padding: 48px 0 64px;
+
+    &__visual {
+      height: 280px;
+    }
+  }
+
+  .facts {
+    padding: 48px 0;
+
+    &__grid {
+      grid-template-columns: 1fr;
+    }
+
+    &__number {
+      font-size: 2.2rem;
+    }
+  }
+
+  .values {
+    padding: 64px 0;
+
+    &__item {
+      padding: 24px 20px;
+    }
+  }
+
+  .contact-cta {
+    padding: 48px 0;
+
+    &__actions {
+      align-items: flex-start;
+    }
+
+    &__phone {
+      font-size: 1.2rem;
+    }
+  }
+}
 </style>
