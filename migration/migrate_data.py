@@ -6,7 +6,8 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REBUILD_ROOT = SCRIPT_DIR.parent
-BACKEND_DIR = REBUILD_ROOT / "backend"
+_candidates = [Path("/app"), REBUILD_ROOT / "backend"]
+BACKEND_DIR = next((p for p in _candidates if (p / "app" / "__init__.py").exists()), _candidates[-1])
 sys.path.insert(0, str(BACKEND_DIR))
 
 os.chdir(BACKEND_DIR)
