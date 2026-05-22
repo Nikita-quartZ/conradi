@@ -2,31 +2,11 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 
 const routes = [
-  {
-    path: "/",
-    name: "home",
-    component: () => import("@/views/HomeView.vue"),
-  },
-  {
-    path: "/catalog",
-    name: "catalog",
-    component: () => import("@/views/CatalogView.vue"),
-  },
-  {
-    path: "/product/:id",
-    name: "product",
-    component: () => import("@/views/ProductView.vue"),
-  },
-  {
-    path: "/about",
-    name: "about",
-    component: () => import("@/views/AboutView.vue"),
-  },
-  {
-    path: "/delivery",
-    name: "delivery",
-    component: () => import("@/views/DeliveryView.vue"),
-  },
+  { path: "/", name: "home", component: () => import("@/views/HomeView.vue") },
+  { path: "/catalog", name: "catalog", component: () => import("@/views/CatalogView.vue") },
+  { path: "/product/:id", name: "product", component: () => import("@/views/ProductView.vue") },
+  { path: "/about", name: "about", component: () => import("@/views/AboutView.vue") },
+  { path: "/delivery", name: "delivery", component: () => import("@/views/DeliveryView.vue") },
   {
     path: "/login",
     name: "login",
@@ -92,18 +72,11 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior() {
-    return { top: 0 };
-  },
+  scrollBehavior: () => ({ top: 0 }),
 });
 
-router.beforeEach(async (to) => {
+router.beforeEach((to) => {
   const auth = useAuthStore();
-
-  if (auth.token && !auth.user) {
-    await auth.fetchMe();
-  }
-
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: "login", query: { redirect: to.fullPath } };
   }

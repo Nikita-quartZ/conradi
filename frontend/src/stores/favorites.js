@@ -5,16 +5,12 @@ import { useAuthStore } from "./auth";
 
 export const useFavoritesStore = defineStore("favorites", () => {
   const ids = ref([]);
-
   const idSet = computed(() => new Set(ids.value));
 
-  function isFavorite(productId) {
-    return idSet.value.has(productId);
-  }
+  const isFavorite = (productId) => idSet.value.has(productId);
 
-  async function fetchIds() {
-    const auth = useAuthStore();
-    if (!auth.isAuthenticated) {
+  async function load() {
+    if (!useAuthStore().isAuthenticated) {
       ids.value = [];
       return;
     }
@@ -32,5 +28,9 @@ export const useFavoritesStore = defineStore("favorites", () => {
     }
   }
 
-  return { ids, isFavorite, fetchIds, toggle };
+  function reset() {
+    ids.value = [];
+  }
+
+  return { ids, isFavorite, load, toggle, reset };
 });

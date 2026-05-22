@@ -2,6 +2,7 @@
 import { computed, onMounted } from "vue";
 import { useRouter, RouterLink } from "vue-router";
 import { useCartStore } from "@/stores/cart";
+import { formatPrice, pluralizeRu } from "@/utils/format";
 import Button from "primevue/button";
 import InputNumber from "primevue/inputnumber";
 
@@ -9,17 +10,16 @@ const cart = useCartStore();
 const router = useRouter();
 
 const hasItems = computed(() => cart.items.length > 0);
+const countLabel = computed(
+  () => `${cart.count} ${pluralizeRu(cart.count, ["товар", "товара", "товаров"])}`,
+);
 
-async function updateQty(itemId, value) {
+function updateQty(itemId, value) {
   if (!value || value < 1) return;
-  await cart.update(itemId, value);
+  return cart.update(itemId, value);
 }
 
-function fmtPrice(p) {
-  return new Intl.NumberFormat("ru-RU").format(p) + " ₽";
-}
-
-onMounted(() => cart.fetch());
+onMounted(() => cart.load());
 </script>
 
 <template>
@@ -27,7 +27,7 @@ onMounted(() => cart.fetch());
     <div class="container">
       <header class="cart-page__head">
         <h1>Корзина</h1>
-        <p v-if="hasItems">{{ cart.count }} {{ cart.count === 1 ? "товар" : "товаров" }} на сумму {{ fmtPrice(cart.total) }}</p>
+        <p v-if="hasItems">{{ countLabel }} на сумму {{ formatPrice(cart.total) }}</p>
       </header>
 
       <div v-if="!hasItems" class="cart-empty">
@@ -54,7 +54,7 @@ onMounted(() => cart.fetch());
               <RouterLink :to="`/product/${item.product.id}`" class="cart-item__title">
                 {{ item.product.title }}
               </RouterLink>
-              <div class="cart-item__price">{{ fmtPrice(item.product.price) }} за шт.</div>
+              <div class="cart-item__price">{{ formatPrice(item.product.price) }} за шт.</div>
               <div v-if="!item.product.in_stock" class="cart-item__warning">
                 Нет в наличии
               </div>
@@ -70,7 +70,7 @@ onMounted(() => cart.fetch());
               />
             </div>
             <div class="cart-item__total">
-              {{ fmtPrice(item.product.price * item.quantity) }}
+              {{ formatPrice(item.product.price * item.quantity) }}
             </div>
             <Button
               icon="pi pi-trash"
@@ -90,7 +90,7 @@ onMounted(() => cart.fetch());
           </div>
           <div class="cart-summary__row cart-summary__row--total">
             <span>К оплате</span>
-            <span>{{ fmtPrice(cart.total) }}</span>
+            <span>{{ formatPrice(cart.total) }}</span>
           </div>
           <Button
             label="Оформить заказ"

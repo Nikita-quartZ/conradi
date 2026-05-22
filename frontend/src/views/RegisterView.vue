@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from "vue";
+import { reactive, ref } from "vue";
 import { useRouter, RouterLink } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { toIsoDate } from "@/utils/format";
 import InputText from "primevue/inputtext";
 import DatePicker from "primevue/datepicker";
 import Button from "primevue/button";
@@ -10,7 +11,7 @@ import Message from "primevue/message";
 const auth = useAuthStore();
 const router = useRouter();
 
-const form = ref({
+const form = reactive({
   full_name: "",
   login: "",
   password: "",
@@ -20,33 +21,22 @@ const form = ref({
 const error = ref(null);
 const fieldErrors = ref({});
 
-function fmtDate(d) {
-  if (!d) return null;
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 async function submit() {
   error.value = null;
   fieldErrors.value = {};
   try {
     await auth.register({
-      full_name: form.value.full_name,
-      login: form.value.login,
-      password: form.value.password,
-      phone: form.value.phone,
-      birthday: fmtDate(form.value.birthday),
+      full_name: form.full_name,
+      login: form.login,
+      password: form.password,
+      phone: form.phone,
+      birthday: toIsoDate(form.birthday),
     });
     router.push("/");
   } catch (err) {
     const payload = err.response?.data;
-    if (payload?.errors) {
-      fieldErrors.value = payload.errors;
-    } else {
-      error.value = payload?.error || "Не удалось зарегистрироваться";
-    }
+    if (payload?.errors) fieldErrors.value = payload.errors;
+    else error.value = payload?.error || "Не удалось зарегистрироваться";
   }
 }
 </script>

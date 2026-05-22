@@ -4,10 +4,11 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useFavoritesStore } from "@/stores/favorites";
 import { useCartStore } from "@/stores/cart";
+import { formatPrice } from "@/utils/format";
 import StarRating from "./StarRating.vue";
 import Button from "primevue/button";
 
-const props = defineProps({
+const { product } = defineProps({
   product: { type: Object, required: true },
 });
 
@@ -16,34 +17,30 @@ const auth = useAuthStore();
 const favorites = useFavoritesStore();
 const cart = useCartStore();
 
-const image = computed(() => props.product.images?.[0]?.url || null);
-const isFav = computed(() => favorites.isFavorite(props.product.id));
-const inStock = computed(() => props.product.stock > 0);
+const image = computed(() => product.images?.[0]?.url ?? null);
+const isFav = computed(() => favorites.isFavorite(product.id));
+const inStock = computed(() => product.stock > 0);
 
 function open() {
-  router.push(`/product/${props.product.id}`);
+  router.push(`/product/${product.id}`);
 }
 
-async function toggleFav(e) {
-  e.stopPropagation();
-  if (!auth.isAuthenticated) {
-    router.push({ path: "/login", query: { redirect: router.currentRoute.value.fullPath } });
-    return;
-  }
-  await favorites.toggle(props.product.id);
+function ensureAuth() {
+  if (auth.isAuthenticated) return true;
+  router.push({ path: "/login", query: { redirect: router.currentRoute.value.fullPath } });
+  return false;
 }
 
-async function addToCart(e) {
-  e.stopPropagation();
-  if (!auth.isAuthenticated) {
-    router.push({ path: "/login", query: { redirect: router.currentRoute.value.fullPath } });
-    return;
-  }
-  await cart.add(props.product.id, 1);
+async function toggleFav(event) {
+  event.stopPropagation();
+  if (!ensureAuth()) return;
+  await favorites.toggle(product.id);
 }
 
-function fmtPrice(p) {
-  return new Intl.NumberFormat("ru-RU").format(p) + " ₽";
+async function addToCart(event) {
+  event.stopPropagation();
+  if (!ensureAuth()) return;
+  await cart.add(product.id, 1);
 }
 </script>
 
@@ -57,8 +54,8 @@ function fmtPrice(p) {
       <button
         class="card__fav"
         :class="{ 'card__fav--active': isFav }"
-        @click="toggleFav"
         :aria-label="isFav ? 'Убрать из избранного' : 'В избранное'"
+        @click="toggleFav"
       >
         <i :class="isFav ? 'pi pi-heart-fill' : 'pi pi-heart'" />
       </button>
@@ -70,21 +67,21 @@ function fmtPrice(p) {
         <span class="card__category">{{ product.category?.title }}</span>
         <StarRating
           v-if="product.average_rating > 0"
-          :modelValue="product.average_rating"
+          :model-value="product.average_rating"
           readonly
           size="sm"
         />
       </div>
       <h3 class="card__title">{{ product.title }}</h3>
       <div class="card__bottom">
-        <div class="card__price">{{ fmtPrice(product.price) }}</div>
+        <div class="card__price">{{ formatPrice(product.price) }}</div>
         <Button
           icon="pi pi-shopping-bag"
           severity="secondary"
-          :disabled="!inStock"
-          @click="addToCart"
           rounded
           aria-label="В корзину"
+          :disabled="!inStock"
+          @click="addToCart"
         />
       </div>
     </div>

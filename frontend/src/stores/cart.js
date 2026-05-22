@@ -8,43 +8,44 @@ export const useCartStore = defineStore("cart", () => {
   const total = ref(0);
   const count = ref(0);
 
-  function _apply(data) {
-    items.value = data.items;
-    total.value = data.total;
-    count.value = data.count;
+  function apply({ items: nextItems = [], total: nextTotal = 0, count: nextCount = 0 } = {}) {
+    items.value = nextItems;
+    total.value = nextTotal;
+    count.value = nextCount;
   }
 
-  async function fetch() {
-    const auth = useAuthStore();
-    if (!auth.isAuthenticated) {
-      items.value = [];
-      total.value = 0;
-      count.value = 0;
+  function reset() {
+    apply();
+  }
+
+  async function load() {
+    if (!useAuthStore().isAuthenticated) {
+      reset();
       return;
     }
     const { data } = await cartApi.get();
-    _apply(data);
+    apply(data);
   }
 
   async function add(productId, quantity = 1) {
     const { data } = await cartApi.add(productId, quantity);
-    _apply(data);
+    apply(data);
   }
 
   async function update(itemId, quantity) {
     const { data } = await cartApi.update(itemId, quantity);
-    _apply(data);
+    apply(data);
   }
 
   async function remove(itemId) {
     const { data } = await cartApi.remove(itemId);
-    _apply(data);
+    apply(data);
   }
 
   async function clear() {
     const { data } = await cartApi.clear();
-    _apply(data);
+    apply(data);
   }
 
-  return { items, total, count, fetch, add, update, remove, clear };
+  return { items, total, count, load, add, update, remove, clear, reset };
 });

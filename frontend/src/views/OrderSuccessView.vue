@@ -1,23 +1,20 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ordersApi } from "@/api";
+import { useAsyncData } from "@/composables/useAsyncData";
+import { formatPrice } from "@/utils/format";
 import Button from "primevue/button";
 
 const route = useRoute();
 const router = useRouter();
-const order = ref(null);
 
-const fmt = (n) => new Intl.NumberFormat("ru-RU").format(n) + " ₽";
-
-onMounted(async () => {
-  try {
+const { data: order } = useAsyncData(
+  async () => {
     const { data } = await ordersApi.detail(route.params.id);
-    order.value = data.order;
-  } catch {
-    order.value = null;
-  }
-});
+    return data.order;
+  },
+  { onError: () => null },
+);
 </script>
 
 <template>
@@ -40,7 +37,7 @@ onMounted(async () => {
           </div>
           <div class="success__row">
             <span>Сумма</span>
-            <strong>{{ fmt(order.total) }}</strong>
+            <strong>{{ formatPrice(order.total) }}</strong>
           </div>
           <div class="success__row">
             <span>Способ оплаты</span>

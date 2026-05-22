@@ -1,6 +1,7 @@
 <script setup>
 import { useRouter, RouterLink } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { formatDate } from "@/utils/format";
 import Button from "primevue/button";
 
 const auth = useAuthStore();
@@ -9,11 +10,6 @@ const router = useRouter();
 function logout() {
   auth.logout();
   router.push("/");
-}
-
-function fmtDate(d) {
-  if (!d) return "";
-  return new Date(d).toLocaleDateString("ru-RU");
 }
 </script>
 
@@ -53,11 +49,11 @@ function fmtDate(d) {
           </div>
           <div class="account__row">
             <span>Дата рождения</span>
-            <strong>{{ fmtDate(auth.user?.birthday) }}</strong>
+            <strong>{{ formatDate(auth.user?.birthday) }}</strong>
           </div>
           <div class="account__row">
             <span>Зарегистрирован</span>
-            <strong>{{ fmtDate(auth.user?.created_at) }}</strong>
+            <strong>{{ formatDate(auth.user?.created_at) }}</strong>
           </div>
           <div v-if="auth.isAdmin" class="account__row">
             <span>Роль</span>

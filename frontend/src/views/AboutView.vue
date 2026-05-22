@@ -1,20 +1,21 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { catalogApi } from "@/api";
+import { useAsyncData } from "@/composables/useAsyncData";
 import Button from "primevue/button";
 
 const router = useRouter();
-const heroImage = ref(null);
 
-onMounted(async () => {
-  try {
+const { data: heroProduct } = useAsyncData(
+  async () => {
     const { data } = await catalogApi.product(22);
-    heroImage.value = data.product?.images?.[0]?.url || null;
-  } catch (e) {
-    heroImage.value = null;
-  }
-});
+    return data.product;
+  },
+  { onError: () => null },
+);
+
+const heroImage = computed(() => heroProduct.value?.images?.[0]?.url ?? null);
 
 const facts = [
   { icon: "pi pi-calendar", number: "12+", label: "лет на рынке" },

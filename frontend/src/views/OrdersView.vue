@@ -1,12 +1,12 @@
 <script setup>
-import { ref, onMounted } from "vue";
-import { useRouter, RouterLink } from "vue-router";
+import { computed } from "vue";
+import { useRouter } from "vue-router";
 import { ordersApi } from "@/api";
+import { useAsyncData } from "@/composables/useAsyncData";
+import { formatPrice, formatDateTime, pluralizeRu } from "@/utils/format";
 import Button from "primevue/button";
 
 const router = useRouter();
-const orders = ref([]);
-const loading = ref(true);
 
 const STATUS_BADGE = {
   created: "badge--created",
@@ -16,19 +16,24 @@ const STATUS_BADGE = {
   canceled: "badge--canceled",
 };
 
-const fmt = (p) => new Intl.NumberFormat("ru-RU").format(p) + " ₽";
+const PAY_METHOD_LABEL = {
+  card: "Картой",
+  cash: "Курьеру",
+};
 
-async function load() {
-  loading.value = true;
-  try {
+const { data: orders, pending } = useAsyncData(
+  async () => {
     const { data } = await ordersApi.list();
-    orders.value = data.items;
-  } finally {
-    loading.value = false;
-  }
-}
+    return data.items;
+  },
+  { initialValue: [] },
+);
 
-onMounted(load);
+const ordersList = computed(() => orders.value ?? []);
+const countLabel = computed(() => {
+  const n = ordersList.value.length;
+  return `${n} ${pluralizeRu(n, ["заказ", "заказа", "заказов"])}`;
+});
 </script>
 
 <template>
@@ -36,12 +41,12 @@ onMounted(load);
     <div class="container">
       <header class="orders__head">
         <h1>Мои заказы</h1>
-        <p v-if="!loading">{{ orders.length }} {{ orders.length === 1 ? "заказ" : "заказов" }}</p>
+        <p v-if="!pending">{{ countLabel }}</p>
       </header>
 
-      <div v-if="loading" class="orders__loading">Загружаем…</div>
+      <div v-if="pending" class="orders__loading">Загружаем…</div>
 
-      <div v-else-if="!orders.length" class="orders__empty">
+      <div v-else-if="!ordersList.length" class="orders__empty">
         <i class="pi pi-receipt" />
         <h2>Заказов пока нет</h2>
         <p>Когда вы оформите первый заказ, он появится здесь</p>
@@ -49,7 +54,7 @@ onMounted(load);
       </div>
 
       <div v-else class="orders__list">
-        <article v-for="o in orders" :key="o.id" class="order">
+        <article v-for="o in ordersList" :key="o.id" class="order">
           <header class="order__head">
             <div class="order__id">Заказ #{{ o.id }}</div>
             <span class="order__badge" :class="STATUS_BADGE[o.status]">
@@ -60,7 +65,7 @@ onMounted(load);
           <div class="order__items">
             <div v-for="it in o.items" :key="it.id" class="order__item">
               <span>{{ it.title_snapshot }} ×{{ it.quantity }}</span>
-              <span>{{ fmt(it.price_snapshot * it.quantity) }}</span>
+              <span>{{ formatPrice(it.price_snapshot * it.quantity) }}</span>
             </div>
           </div>
 
@@ -75,13 +80,13 @@ onMounted(load);
             </div>
             <div class="order__meta-col">
               <span>Оплата</span>
-              <strong>{{ o.pay_method === "card" ? "Картой" : "Курьеру" }}</strong>
+              <strong>{{ PAY_METHOD_LABEL[o.pay_method] ?? o.pay_method }}</strong>
             </div>
           </div>
 
           <div class="order__footer">
-            <span class="order__date">{{ new Date(o.created_at).toLocaleString("ru-RU") }}</span>
-            <span class="order__total">{{ fmt(o.total) }}</span>
+            <span class="order__date">{{ formatDateTime(o.created_at) }}</span>
+            <span class="order__total">{{ formatPrice(o.total) }}</span>
           </div>
         </article>
       </div>

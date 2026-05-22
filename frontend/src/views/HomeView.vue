@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { catalogApi } from "@/api";
+import { useAsyncData } from "@/composables/useAsyncData";
 import Button from "primevue/button";
 
 const router = useRouter();
@@ -22,50 +23,49 @@ const COVER_PRODUCT_ID = {
 
 const HERO_PRODUCT_IDS = [13, 21];
 
-const categories = ref([]);
-const heroImages = ref([]);
+async function fetchCoverImage(category) {
+  const coverId = COVER_PRODUCT_ID[category.id];
+  if (coverId) {
+    const { data } = await catalogApi.product(coverId);
+    return data.product?.images?.[0]?.url ?? null;
+  }
+  const { data } = await catalogApi.products({ category_id: category.id, per_page: 1 });
+  return data.items[0]?.images?.[0]?.url ?? null;
+}
 
-async function loadCategoriesWithCover() {
-  const { data } = await catalogApi.categories();
-  const result = await Promise.all(
-    data.items.map(async (c) => {
-      const coverProductId = COVER_PRODUCT_ID[c.id];
-      let image = null;
-      if (coverProductId) {
-        const { data: pd } = await catalogApi.product(coverProductId);
-        image = pd.product?.images?.[0]?.url || null;
-      } else {
-        const r = await catalogApi.products({ category_id: c.id, per_page: 1 });
-        image = r.data.items[0]?.images?.[0]?.url || null;
-      }
-      return {
+const { data: categories } = useAsyncData(
+  async () => {
+    const { data } = await catalogApi.categories();
+    return Promise.all(
+      data.items.map(async (c) => ({
         id: c.id,
         title: c.title,
-        desc: DESCRIPTIONS[c.id] || "",
-        image,
-      };
-    }),
-  );
-  categories.value = result;
-}
+        desc: DESCRIPTIONS[c.id] ?? "",
+        image: await fetchCoverImage(c),
+      })),
+    );
+  },
+  { initialValue: [] },
+);
 
-async function loadHeroImages() {
-  const responses = await Promise.all(
-    HERO_PRODUCT_IDS.map((id) => catalogApi.product(id).catch(() => null)),
-  );
-  heroImages.value = responses
-    .map((r) => r?.data?.product?.images?.[0]?.url)
-    .filter(Boolean);
-}
+const { data: heroImages } = useAsyncData(
+  async () => {
+    const responses = await Promise.all(
+      HERO_PRODUCT_IDS.map((id) => catalogApi.product(id).catch(() => null)),
+    );
+    return responses
+      .map((r) => r?.data?.product?.images?.[0]?.url)
+      .filter(Boolean);
+  },
+  { initialValue: [] },
+);
+
+const categoriesList = computed(() => categories.value ?? []);
+const heroList = computed(() => heroImages.value ?? []);
 
 function openCatalog(categoryId) {
   router.push({ path: "/catalog", query: categoryId ? { category: categoryId } : {} });
 }
-
-onMounted(() => {
-  loadCategoriesWithCover();
-  loadHeroImages();
-});
 </script>
 
 <template>
@@ -94,10 +94,10 @@ onMounted(() => {
       </div>
       <div class="hero__media">
         <div class="hero__card hero__card--lg">
-          <img v-if="heroImages[0]" :src="heroImages[0]" alt="" />
+          <img v-if="heroList[0]" :src="heroList[0]" alt="" />
         </div>
         <div class="hero__card hero__card--sm">
-          <img v-if="heroImages[1]" :src="heroImages[1]" alt="" />
+          <img v-if="heroList[1]" :src="heroList[1]" alt="" />
         </div>
       </div>
     </div>
@@ -111,7 +111,7 @@ onMounted(() => {
       </header>
       <div class="categories__grid">
         <article
-          v-for="cat in categories"
+          v-for="cat in categoriesList"
           :key="cat.id"
           class="category-card"
           @click="openCatalog(cat.id)"

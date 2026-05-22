@@ -5,25 +5,30 @@ import Aura from "@primevue/themes/aura";
 
 import App from "./App.vue";
 import router from "./router";
+import { useAuthStore } from "@/stores/auth";
 
 import "primeicons/primeicons.css";
 import "./assets/styles/main.scss";
 
-const app = createApp(App);
+async function bootstrap() {
+  const app = createApp(App);
+  app.use(createPinia());
 
-app.use(createPinia());
-app.use(router);
-app.use(PrimeVue, {
-  theme: {
-    preset: Aura,
-    options: {
-      darkModeSelector: ".dark-mode",
-      cssLayer: {
-        name: "primevue",
-        order: "primevue",
+  const auth = useAuthStore();
+  if (auth.token) await auth.fetchMe();
+
+  app.use(router);
+  app.use(PrimeVue, {
+    theme: {
+      preset: Aura,
+      options: {
+        darkModeSelector: ".dark-mode",
+        cssLayer: { name: "primevue", order: "primevue" },
       },
     },
-  },
-});
+  });
 
-app.mount("#app");
+  app.mount("#app");
+}
+
+bootstrap();

@@ -1,39 +1,38 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { favoritesApi } from "@/api";
 import { useFavoritesStore } from "@/stores/favorites";
 import { useCartStore } from "@/stores/cart";
+import { useAsyncData } from "@/composables/useAsyncData";
+import { formatPrice, pluralizeRu } from "@/utils/format";
 import Button from "primevue/button";
 
 const router = useRouter();
 const favStore = useFavoritesStore();
 const cart = useCartStore();
-const items = ref([]);
-const loading = ref(true);
 
-async function load() {
-  loading.value = true;
-  try {
+const { data: items, pending, refresh } = useAsyncData(
+  async () => {
     const { data } = await favoritesApi.list();
-    items.value = data.items;
-  } finally {
-    loading.value = false;
-  }
-}
+    return data.items;
+  },
+  { initialValue: [] },
+);
+
+const itemsList = computed(() => items.value ?? []);
+const countLabel = computed(() =>
+  `${itemsList.value.length} ${pluralizeRu(itemsList.value.length, ["товар", "товара", "товаров"])}`,
+);
 
 async function remove(productId) {
   await favStore.toggle(productId);
-  items.value = items.value.filter((it) => it.product.id !== productId);
+  await refresh();
 }
 
-async function addToCart(productId) {
-  await cart.add(productId, 1);
+function addToCart(productId) {
+  return cart.add(productId, 1);
 }
-
-const fmt = (p) => new Intl.NumberFormat("ru-RU").format(p) + " ₽";
-
-onMounted(load);
 </script>
 
 <template>
@@ -41,12 +40,12 @@ onMounted(load);
     <div class="container">
       <header class="favorites__head">
         <h1>Избранное</h1>
-        <p v-if="!loading">{{ items.length }} {{ items.length === 1 ? "товар" : "товаров" }}</p>
+        <p v-if="!pending">{{ countLabel }}</p>
       </header>
 
-      <div v-if="loading" class="favorites__loading">Загружаем…</div>
+      <div v-if="pending" class="favorites__loading">Загружаем…</div>
 
-      <div v-else-if="!items.length" class="favorites__empty">
+      <div v-else-if="!itemsList.length" class="favorites__empty">
         <i class="pi pi-heart" />
         <h2>Пока ничего не добавлено</h2>
         <p>Сохраняйте понравившиеся букеты, чтобы вернуться к ним позже</p>
@@ -54,7 +53,7 @@ onMounted(load);
       </div>
 
       <div v-else class="favorites__grid">
-        <article v-for="fav in items" :key="fav.id" class="fav-item">
+        <article v-for="fav in itemsList" :key="fav.id" class="fav-item">
           <div class="fav-item__media" @click="router.push(`/product/${fav.product.id}`)">
             <img
               v-if="fav.product.images?.[0]"
@@ -66,8 +65,8 @@ onMounted(load);
             </div>
             <button
               class="fav-item__remove"
-              @click.stop="remove(fav.product.id)"
               aria-label="Убрать"
+              @click.stop="remove(fav.product.id)"
             >
               <i class="pi pi-heart-fill" />
             </button>
@@ -77,7 +76,7 @@ onMounted(load);
               {{ fav.product.title }}
             </h3>
             <div class="fav-item__bottom">
-              <div class="fav-item__price">{{ fmt(fav.product.price) }}</div>
+              <div class="fav-item__price">{{ formatPrice(fav.product.price) }}</div>
               <Button
                 icon="pi pi-shopping-bag"
                 severity="secondary"

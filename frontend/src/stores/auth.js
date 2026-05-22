@@ -1,43 +1,41 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { authApi } from "@/api";
+import { useLocalStorage } from "@/composables/useLocalStorage";
 
 export const useAuthStore = defineStore("auth", () => {
-  const token = ref(localStorage.getItem("token") || null);
+  const token = useLocalStorage("token", null);
   const user = ref(null);
   const loading = ref(false);
 
-  const isAuthenticated = computed(() => !!token.value);
+  const isAuthenticated = computed(() => Boolean(token.value));
   const isAdmin = computed(() => user.value?.role === "admin");
 
-  function setToken(value) {
-    token.value = value;
-    if (value) localStorage.setItem("token", value);
-    else localStorage.removeItem("token");
+  async function withLoading(task) {
+    loading.value = true;
+    try {
+      return await task();
+    } finally {
+      loading.value = false;
+    }
   }
 
   async function login(credentials) {
-    loading.value = true;
-    try {
+    return withLoading(async () => {
       const { data } = await authApi.login(credentials);
-      setToken(data.token);
+      token.value = data.token;
       user.value = data.user;
       return data.user;
-    } finally {
-      loading.value = false;
-    }
+    });
   }
 
   async function register(payload) {
-    loading.value = true;
-    try {
+    return withLoading(async () => {
       const { data } = await authApi.register(payload);
-      setToken(data.token);
+      token.value = data.token;
       user.value = data.user;
       return data.user;
-    } finally {
-      loading.value = false;
-    }
+    });
   }
 
   async function fetchMe() {
@@ -47,14 +45,14 @@ export const useAuthStore = defineStore("auth", () => {
       user.value = data.user;
       return data.user;
     } catch {
-      setToken(null);
+      token.value = null;
       user.value = null;
       return null;
     }
   }
 
   function logout() {
-    setToken(null);
+    token.value = null;
     user.value = null;
   }
 

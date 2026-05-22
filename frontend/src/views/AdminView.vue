@@ -1,11 +1,11 @@
 <script setup>
-import { ref } from "vue";
+import { useRouteQuery } from "@/composables/useRouteQuery";
 import AdminOrders from "@/components/admin/AdminOrders.vue";
 import AdminProducts from "@/components/admin/AdminProducts.vue";
 import AdminCategories from "@/components/admin/AdminCategories.vue";
 import AdminTypes from "@/components/admin/AdminTypes.vue";
 
-const tab = ref("orders");
+const tab = useRouteQuery("tab", "orders");
 
 const tabs = [
   { id: "orders", label: "Заказы", icon: "pi pi-receipt" },

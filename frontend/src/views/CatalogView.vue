@@ -1,7 +1,15 @@
 <script setup>
-import { ref, onMounted, watch, computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { computed, reactive, ref } from "vue";
+import { useRoute } from "vue-router";
 import { catalogApi } from "@/api";
+import { useAsyncData } from "@/composables/useAsyncData";
+import {
+  useRouteQuery,
+  useRouteQueryBatch,
+  asNumber,
+  asBoolean,
+} from "@/composables/useRouteQuery";
+import { pluralizeRu } from "@/utils/format";
 import ProductCard from "@/components/ProductCard.vue";
 import Select from "primevue/select";
 import InputText from "primevue/inputtext";
@@ -10,26 +18,28 @@ import Button from "primevue/button";
 import Paginator from "primevue/paginator";
 
 const route = useRoute();
-const router = useRouter();
 
-const categories = ref([]);
-const types = ref([]);
-const products = ref([]);
-const total = ref(0);
-const loading = ref(false);
+const PER_PAGE = 12;
 
-const filters = ref({
-  category_id: route.query.category ? Number(route.query.category) : null,
-  product_type_id: route.query.type ? Number(route.query.type) : null,
-  q: route.query.q || "",
-  min_price: null,
-  max_price: null,
-  in_stock: false,
-  sort: "newest",
+const categoryId = useRouteQuery("category", null, asNumber);
+const typeId = useRouteQuery("type", null, asNumber);
+const sort = useRouteQuery("sort", "newest");
+const page = useRouteQuery("page", 1, asNumber);
+
+const formFilters = reactive({
+  q: route.query.q ?? "",
+  min_price: asNumber(route.query.min_price),
+  max_price: asNumber(route.query.max_price),
+  in_stock: asBoolean(route.query.in_stock),
 });
 
-const page = ref(Number(route.query.page) || 1);
-const perPage = ref(12);
+const appliedQ = useRouteQuery("q", "");
+const appliedMin = useRouteQuery("min_price", null, asNumber);
+const appliedMax = useRouteQuery("max_price", null, asNumber);
+const appliedInStock = useRouteQuery("in_stock", false, asBoolean);
+
+const setQueryBatch = useRouteQueryBatch();
+
 const filtersOpen = ref(false);
 
 const sortOptions = [
@@ -38,78 +48,95 @@ const sortOptions = [
   { value: "price_desc", label: "Сначала дороже" },
 ];
 
-async function loadMeta() {
-  const [c, t] = await Promise.all([
-    catalogApi.categories(),
-    catalogApi.productTypes(),
+const requestParams = computed(() => {
+  const params = { page: page.value, per_page: PER_PAGE, sort: sort.value };
+  if (categoryId.value) params.category_id = categoryId.value;
+  if (typeId.value) params.product_type_id = typeId.value;
+  if (appliedQ.value) params.q = appliedQ.value;
+  if (appliedMin.value != null) params.min_price = appliedMin.value;
+  if (appliedMax.value != null) params.max_price = appliedMax.value;
+  if (appliedInStock.value) params.in_stock = "true";
+  return params;
+});
+
+const { data: meta } = useAsyncData(async () => {
+  const [c, t] = await Promise.all([catalogApi.categories(), catalogApi.productTypes()]);
+  return { categories: c.data.items, types: t.data.items };
+});
+
+const { data: catalogData, pending } = useAsyncData(
+  () => catalogApi.products(requestParams.value).then((r) => r.data),
+  { watch: [requestParams], initialValue: { items: [], total: 0 } },
+);
+
+const categories = computed(() => meta.value?.categories ?? []);
+const types = computed(() => meta.value?.types ?? []);
+const products = computed(() => catalogData.value?.items ?? []);
+const total = computed(() => catalogData.value?.total ?? 0);
+
+const activeCategoryTitle = computed(
+  () => categories.value.find((c) => c.id === categoryId.value)?.title ?? "",
+);
+
+const totalLabel = computed(
+  () => `${total.value} ${pluralizeRu(total.value, ["товар", "товара", "товаров"])}`,
+);
+
+function pickCategory(id) {
+  setQueryBatch([
+    ["category", id, null],
+    ["page", 1, 1],
   ]);
-  categories.value = c.data.items;
-  types.value = t.data.items;
+  filtersOpen.value = false;
 }
 
-async function loadProducts() {
-  loading.value = true;
-  try {
-    const params = { page: page.value, per_page: perPage.value, sort: filters.value.sort };
-    if (filters.value.category_id) params.category_id = filters.value.category_id;
-    if (filters.value.product_type_id) params.product_type_id = filters.value.product_type_id;
-    if (filters.value.q) params.q = filters.value.q;
-    if (filters.value.min_price != null) params.min_price = filters.value.min_price;
-    if (filters.value.max_price != null) params.max_price = filters.value.max_price;
-    if (filters.value.in_stock) params.in_stock = "true";
-
-    const { data } = await catalogApi.products(params);
-    products.value = data.items;
-    total.value = data.total;
-  } finally {
-    loading.value = false;
-  }
+function pickType(id) {
+  setQueryBatch([
+    ["type", id, null],
+    ["page", 1, 1],
+  ]);
+  filtersOpen.value = false;
 }
 
-function applyFilters() {
-  page.value = 1;
-  loadProducts();
+function changeSort(value) {
+  setQueryBatch([
+    ["sort", value, "newest"],
+    ["page", 1, 1],
+  ]);
+}
+
+function applyForm() {
+  setQueryBatch([
+    ["q", formFilters.q, ""],
+    ["min_price", formFilters.min_price, null],
+    ["max_price", formFilters.max_price, null],
+    ["in_stock", formFilters.in_stock ? "true" : null, null],
+    ["page", 1, 1],
+  ]);
   filtersOpen.value = false;
 }
 
 function resetFilters() {
-  filters.value = {
-    category_id: null,
-    product_type_id: null,
-    q: "",
-    min_price: null,
-    max_price: null,
-    in_stock: false,
-    sort: "newest",
-  };
-  page.value = 1;
-  loadProducts();
+  formFilters.q = "";
+  formFilters.min_price = null;
+  formFilters.max_price = null;
+  formFilters.in_stock = false;
+  setQueryBatch([
+    ["category", null, null],
+    ["type", null, null],
+    ["sort", "newest", "newest"],
+    ["page", 1, 1],
+    ["q", "", ""],
+    ["min_price", null, null],
+    ["max_price", null, null],
+    ["in_stock", null, null],
+  ]);
 }
 
 function onPage(event) {
   page.value = event.page + 1;
-  loadProducts();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
-
-const activeCategoryTitle = computed(() => {
-  const c = categories.value.find((x) => x.id === filters.value.category_id);
-  return c?.title || "";
-});
-
-onMounted(async () => {
-  await loadMeta();
-  await loadProducts();
-});
-
-watch(
-  () => route.query.category,
-  (v) => {
-    filters.value.category_id = v ? Number(v) : null;
-    page.value = 1;
-    loadProducts();
-  },
-);
 </script>
 
 <template>
@@ -117,7 +144,7 @@ watch(
     <div class="container">
       <header class="catalog__head">
         <h1>{{ activeCategoryTitle || "Каталог" }}</h1>
-        <p>Всего {{ total }} {{ total === 1 ? "товар" : "товаров" }}</p>
+        <p>Всего {{ totalLabel }}</p>
       </header>
 
       <button class="catalog__filter-btn" @click="filtersOpen = true">
@@ -129,25 +156,23 @@ watch(
           class="catalog__sidebar"
           :class="{ 'catalog__sidebar--open': filtersOpen }"
         >
-          <button class="catalog__filter-close" @click="filtersOpen = false" aria-label="Закрыть">
+          <button
+            class="catalog__filter-close"
+            aria-label="Закрыть"
+            @click="filtersOpen = false"
+          >
             <i class="pi pi-times" />
           </button>
           <div class="filter-block">
             <h3>Категория</h3>
             <ul class="filter-list">
               <li>
-                <button
-                  :class="{ active: filters.category_id == null }"
-                  @click="filters.category_id = null; applyFilters()"
-                >
+                <button :class="{ active: categoryId == null }" @click="pickCategory(null)">
                   Все
                 </button>
               </li>
               <li v-for="c in categories" :key="c.id">
-                <button
-                  :class="{ active: filters.category_id === c.id }"
-                  @click="filters.category_id = c.id; applyFilters()"
-                >
+                <button :class="{ active: categoryId === c.id }" @click="pickCategory(c.id)">
                   {{ c.title }}
                 </button>
               </li>
@@ -158,18 +183,12 @@ watch(
             <h3>Тип</h3>
             <ul class="filter-list">
               <li>
-                <button
-                  :class="{ active: filters.product_type_id == null }"
-                  @click="filters.product_type_id = null; applyFilters()"
-                >
+                <button :class="{ active: typeId == null }" @click="pickType(null)">
                   Все
                 </button>
               </li>
               <li v-for="t in types" :key="t.id">
-                <button
-                  :class="{ active: filters.product_type_id === t.id }"
-                  @click="filters.product_type_id = t.id; applyFilters()"
-                >
+                <button :class="{ active: typeId === t.id }" @click="pickType(t.id)">
                   {{ t.title }}
                 </button>
               </li>
@@ -179,10 +198,10 @@ watch(
           <div class="filter-block">
             <h3>Цена, ₽</h3>
             <div class="filter-price">
-              <InputNumber v-model="filters.min_price" placeholder="От" :min="0" />
-              <InputNumber v-model="filters.max_price" placeholder="До" :min="0" />
+              <InputNumber v-model="formFilters.min_price" placeholder="От" :min="0" />
+              <InputNumber v-model="formFilters.max_price" placeholder="До" :min="0" />
             </div>
-            <Button label="Применить" size="small" outlined @click="applyFilters" />
+            <Button label="Применить" size="small" outlined @click="applyForm" />
           </div>
 
           <Button label="Сбросить" text @click="resetFilters" />
@@ -197,39 +216,35 @@ watch(
         <div class="catalog__main">
           <div class="catalog__toolbar">
             <InputText
-              v-model="filters.q"
+              v-model="formFilters.q"
               placeholder="Поиск по названию..."
-              @keyup.enter="applyFilters"
+              @keyup.enter="applyForm"
             />
             <Select
-              v-model="filters.sort"
+              :model-value="sort"
               :options="sortOptions"
-              optionLabel="label"
-              optionValue="value"
-              @change="applyFilters"
+              option-label="label"
+              option-value="value"
+              @update:model-value="changeSort"
             />
           </div>
 
-          <div v-if="loading" class="catalog__loading">Загружаем...</div>
+          <div v-if="pending" class="catalog__loading">Загружаем...</div>
           <div v-else-if="!products.length" class="catalog__empty">
             <p>По заданным фильтрам ничего не нашлось</p>
             <Button label="Сбросить фильтры" outlined @click="resetFilters" />
           </div>
           <div v-else class="catalog__grid">
-            <ProductCard
-              v-for="p in products"
-              :key="p.id"
-              :product="p"
-            />
+            <ProductCard v-for="p in products" :key="p.id" :product="p" />
           </div>
 
           <Paginator
-            v-if="total > perPage"
-            :rows="perPage"
-            :totalRecords="total"
-            :first="(page - 1) * perPage"
-            @page="onPage"
+            v-if="total > PER_PAGE"
+            :rows="PER_PAGE"
+            :total-records="total"
+            :first="(page - 1) * PER_PAGE"
             class="catalog__paginator"
+            @page="onPage"
           />
         </div>
       </div>

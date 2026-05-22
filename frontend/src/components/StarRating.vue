@@ -1,19 +1,26 @@
 <script setup>
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 
-const props = defineProps({
-  modelValue: { type: Number, default: 0 },
-  readonly: { type: Boolean, default: false },
+const value = defineModel({ type: Number, default: 0 });
+const { readonly = false, size = "md" } = defineProps({
+  readonly: Boolean,
   size: { type: String, default: "md" },
 });
-const emit = defineEmits(["update:modelValue"]);
 
 const hover = ref(0);
-const display = computed(() => hover.value || props.modelValue);
+const display = computed(() => hover.value || value.value);
 
 function pick(n) {
-  if (props.readonly) return;
-  emit("update:modelValue", n);
+  if (readonly) return;
+  value.value = n;
+}
+
+function onEnter(n) {
+  if (!readonly) hover.value = n;
+}
+
+function onLeave() {
+  if (!readonly) hover.value = 0;
 }
 </script>
 
@@ -25,11 +32,11 @@ function pick(n) {
       type="button"
       class="stars__btn"
       :class="{ 'stars__btn--filled': n <= display, 'stars__btn--readonly': readonly }"
-      @mouseenter="!readonly && (hover = n)"
-      @mouseleave="!readonly && (hover = 0)"
-      @click="pick(n)"
       :tabindex="readonly ? -1 : 0"
       :aria-label="`${n} звёзд`"
+      @mouseenter="onEnter(n)"
+      @mouseleave="onLeave"
+      @click="pick(n)"
     >
       <i class="pi pi-star-fill" />
     </button>

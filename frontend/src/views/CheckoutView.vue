@@ -1,8 +1,14 @@
 <script setup>
-import { ref, computed, onMounted, reactive } from "vue";
+import { computed, reactive, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCartStore } from "@/stores/cart";
 import { ordersApi } from "@/api";
+import {
+  formatPrice,
+  toIsoDate,
+  formatCardNumber,
+  formatCardExpiry,
+} from "@/utils/format";
 import InputText from "primevue/inputtext";
 import DatePicker from "primevue/datepicker";
 import Button from "primevue/button";
@@ -30,42 +36,26 @@ const fieldErrors = ref({});
 const today = new Date();
 const maxDate = new Date(today.getTime() + 90 * 24 * 3600 * 1000);
 
+const cardNumber = computed({
+  get: () => form.card_number,
+  set: (v) => (form.card_number = formatCardNumber(v)),
+});
+
+const cardExpiry = computed({
+  get: () => form.card_expiry,
+  set: (v) => (form.card_expiry = formatCardExpiry(v)),
+});
+
 const timeSlots = computed(() => {
   const slots = [];
   for (let h = 9; h <= 20; h++) {
-    for (let m of [0, 15, 30, 45]) {
+    for (const m of [0, 15, 30, 45]) {
       slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     }
   }
   slots.push("21:00");
   return slots;
 });
-
-function fmt(n) {
-  return new Intl.NumberFormat("ru-RU").format(n) + " ₽";
-}
-
-function fmtDate(d) {
-  if (!d) return null;
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function formatCardNumber(value) {
-  return value
-    .replace(/\D/g, "")
-    .slice(0, 16)
-    .replace(/(\d{4})/g, "$1 ")
-    .trim();
-}
-
-function formatExpiry(value) {
-  const digits = value.replace(/\D/g, "").slice(0, 4);
-  if (digits.length >= 3) return digits.slice(0, 2) + "/" + digits.slice(2);
-  return digits;
-}
 
 async function submit() {
   error.value = null;
@@ -75,7 +65,7 @@ async function submit() {
     const payload = {
       address: form.address,
       pay_method: form.pay_method,
-      delivery_date: fmtDate(form.delivery_date),
+      delivery_date: toIsoDate(form.delivery_date),
       delivery_time: form.delivery_time,
     };
     if (form.pay_method === "card") {
@@ -86,7 +76,7 @@ async function submit() {
     }
 
     const { data } = await ordersApi.checkout(payload);
-    await cart.fetch();
+    await cart.load();
     router.push(`/order-success/${data.order.id}`);
   } catch (err) {
     const payload = err.response?.data;
@@ -98,7 +88,7 @@ async function submit() {
 }
 
 onMounted(async () => {
-  await cart.fetch();
+  await cart.load();
   if (!cart.items.length) {
     router.replace("/cart");
   }
@@ -128,12 +118,12 @@ onMounted(async () => {
             <div class="field">
               <label for="ch-date">Дата</label>
               <DatePicker
-                inputId="ch-date"
+                input-id="ch-date"
                 v-model="form.delivery_date"
-                :minDate="today"
-                :maxDate="maxDate"
-                dateFormat="dd.mm.yy"
-                showIcon
+                :min-date="today"
+                :max-date="maxDate"
+                date-format="dd.mm.yy"
+                show-icon
                 fluid
               />
               <small v-if="fieldErrors.delivery_date">{{ fieldErrors.delivery_date[0] }}</small>
@@ -151,11 +141,11 @@ onMounted(async () => {
           <h2>Оплата</h2>
           <div class="pay-method">
             <label class="pay-option">
-              <RadioButton v-model="form.pay_method" inputId="pay-cash" value="cash" />
+              <RadioButton v-model="form.pay_method" input-id="pay-cash" value="cash" />
               <span>Наличными или картой курьеру</span>
             </label>
             <label class="pay-option">
-              <RadioButton v-model="form.pay_method" inputId="pay-card" value="card" />
+              <RadioButton v-model="form.pay_method" input-id="pay-card" value="card" />
               <span>Банковской картой онлайн</span>
             </label>
           </div>
@@ -165,8 +155,7 @@ onMounted(async () => {
               <label for="ch-card-number">Номер карты</label>
               <InputText
                 id="ch-card-number"
-                v-model="form.card_number"
-                @input="form.card_number = formatCardNumber(form.card_number)"
+                v-model="cardNumber"
                 placeholder="0000 0000 0000 0000"
                 inputmode="numeric"
               />
@@ -184,8 +173,7 @@ onMounted(async () => {
                 <label for="ch-card-expiry">Срок</label>
                 <InputText
                   id="ch-card-expiry"
-                  v-model="form.card_expiry"
-                  @input="form.card_expiry = formatExpiry(form.card_expiry)"
+                  v-model="cardExpiry"
                   placeholder="MM/YY"
                   inputmode="numeric"
                 />
@@ -214,9 +202,9 @@ onMounted(async () => {
         <Button
           label="Подтвердить и оплатить"
           size="large"
+          class="checkout__submit"
           :loading="submitting"
           @click="submit"
-          class="checkout__submit"
         />
       </div>
 
@@ -227,12 +215,12 @@ onMounted(async () => {
             {{ item.product.title }} <span>×{{ item.quantity }}</span>
           </div>
           <div class="summary-item__price">
-            {{ fmt(item.product.price * item.quantity) }}
+            {{ formatPrice(item.product.price * item.quantity) }}
           </div>
         </div>
         <div class="summary-total">
           <span>Итого</span>
-          <span>{{ fmt(cart.total) }}</span>
+          <span>{{ formatPrice(cart.total) }}</span>
         </div>
       </aside>
     </div>

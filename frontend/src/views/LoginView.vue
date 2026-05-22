@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { reactive, ref } from "vue";
 import { useRouter, useRoute, RouterLink } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import InputText from "primevue/inputtext";
@@ -10,16 +10,14 @@ const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 
-const login = ref("");
-const password = ref("");
+const form = reactive({ login: "", password: "" });
 const error = ref(null);
 
 async function submit() {
   error.value = null;
   try {
-    await auth.login({ login: login.value, password: password.value });
-    const redirect = route.query.redirect || "/";
-    router.push(redirect);
+    await auth.login({ login: form.login, password: form.password });
+    router.push(route.query.redirect || "/");
   } catch (err) {
     error.value = err.response?.data?.error || "Не удалось войти";
   }
@@ -40,7 +38,7 @@ async function submit() {
             <label for="login">Логин</label>
             <InputText
               id="login"
-              v-model="login"
+              v-model="form.login"
               autocomplete="username"
               required
             />
@@ -50,7 +48,7 @@ async function submit() {
             <label for="password">Пароль</label>
             <InputText
               id="password"
-              v-model="password"
+              v-model="form.password"
               type="password"
               autocomplete="current-password"
               required

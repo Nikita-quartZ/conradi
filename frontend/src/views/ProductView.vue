@@ -1,10 +1,13 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { computed, ref, toRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { catalogApi, ratingsApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
 import { useFavoritesStore } from "@/stores/favorites";
 import { useCartStore } from "@/stores/cart";
+import { useAsyncData } from "@/composables/useAsyncData";
+import { useFlash } from "@/composables/useFlash";
+import { formatPrice } from "@/utils/format";
 import StarRating from "@/components/StarRating.vue";
 import Button from "primevue/button";
 import InputNumber from "primevue/inputnumber";
@@ -15,80 +18,65 @@ const router = useRouter();
 const auth = useAuthStore();
 const favorites = useFavoritesStore();
 const cart = useCartStore();
+const { message: flashMessage, success: flashSuccess } = useFlash();
 
-const product = ref(null);
-const loading = ref(true);
+const productId = toRef(() => route.params.id);
+
 const activeImage = ref(0);
 const quantity = ref(1);
 const myStars = ref(0);
-const message = ref(null);
 
-const isFav = computed(() => product.value && favorites.isFavorite(product.value.id));
-const inStock = computed(() => product.value?.stock > 0);
-
-async function load() {
-  loading.value = true;
-  try {
-    const { data } = await catalogApi.product(route.params.id);
-    product.value = data.product;
+const { data: product, pending } = useAsyncData(
+  async () => {
+    const { data } = await catalogApi.product(productId.value);
     activeImage.value = 0;
     quantity.value = 1;
-
     if (auth.isAuthenticated) {
-      const r = await ratingsApi.mine(product.value.id);
+      const r = await ratingsApi.mine(data.product.id);
       myStars.value = r.data.stars || 0;
+    } else {
+      myStars.value = 0;
     }
-  } catch (e) {
-    product.value = null;
-  } finally {
-    loading.value = false;
-  }
+    return data.product;
+  },
+  { watch: [productId], onError: () => null },
+);
+
+const isFav = computed(() => product.value && favorites.isFavorite(product.value.id));
+const inStock = computed(() => (product.value?.stock ?? 0) > 0);
+
+function ensureAuth() {
+  if (auth.isAuthenticated) return true;
+  router.push({ path: "/login", query: { redirect: route.fullPath } });
+  return false;
 }
 
 async function addToCart() {
-  if (!auth.isAuthenticated) {
-    router.push({ path: "/login", query: { redirect: route.fullPath } });
-    return;
-  }
+  if (!ensureAuth()) return;
   await cart.add(product.value.id, quantity.value);
-  message.value = { severity: "success", text: "Добавлено в корзину" };
-  setTimeout(() => (message.value = null), 3000);
+  flashSuccess("Добавлено в корзину");
 }
 
 async function toggleFav() {
-  if (!auth.isAuthenticated) {
-    router.push({ path: "/login", query: { redirect: route.fullPath } });
-    return;
-  }
+  if (!ensureAuth()) return;
   await favorites.toggle(product.value.id);
 }
 
 async function setRating(stars) {
-  if (!auth.isAuthenticated) {
-    router.push({ path: "/login", query: { redirect: route.fullPath } });
-    return;
-  }
+  if (!ensureAuth()) return;
   myStars.value = stars;
   const { data } = await ratingsApi.set(product.value.id, stars);
   product.value.average_rating = data.average_rating;
-  message.value = { severity: "success", text: "Спасибо за оценку!" };
-  setTimeout(() => (message.value = null), 3000);
+  flashSuccess("Спасибо за оценку!");
 }
-
-function fmtPrice(p) {
-  return new Intl.NumberFormat("ru-RU").format(p) + " ₽";
-}
-
-onMounted(load);
-watch(() => route.params.id, load);
 </script>
 
 <template>
-  <section class="product-page" v-if="loading">
+  <section v-if="pending" class="product-page">
     <div class="container">Загружаем…</div>
   </section>
 
-  <section class="product-page" v-else-if="!product">
+  <section v-else-if="!product" class="product-page">
     <div class="container">
       <h1>Товар не найден</h1>
       <Button label="К каталогу" @click="router.push('/catalog')" />
@@ -128,13 +116,13 @@ watch(() => route.params.id, load);
         <h1 class="info__title">{{ product.title }}</h1>
 
         <div class="info__rating">
-          <StarRating :modelValue="product.average_rating" readonly />
+          <StarRating :model-value="product.average_rating" readonly />
           <span class="info__rating-value">
             {{ product.average_rating > 0 ? product.average_rating : "Нет оценок" }}
           </span>
         </div>
 
-        <div class="info__price">{{ fmtPrice(product.price) }}</div>
+        <div class="info__price">{{ formatPrice(product.price) }}</div>
 
         <div class="info__stock" :class="{ 'info__stock--out': !inStock }">
           <i :class="inStock ? 'pi pi-check-circle' : 'pi pi-times-circle'" />
@@ -142,8 +130,8 @@ watch(() => route.params.id, load);
           <span v-else>Нет в наличии</span>
         </div>
 
-        <Message v-if="message" :severity="message.severity" :closable="false">
-          {{ message.text }}
+        <Message v-if="flashMessage" :severity="flashMessage.severity" :closable="false">
+          {{ flashMessage.text }}
         </Message>
 
         <div v-if="inStock" class="info__cta">
@@ -151,29 +139,29 @@ watch(() => route.params.id, load);
             v-model="quantity"
             :min="1"
             :max="product.stock"
-            showButtons
-            buttonLayout="horizontal"
+            show-buttons
+            button-layout="horizontal"
           />
           <Button
             label="В корзину"
             icon="pi pi-shopping-bag"
             size="large"
-            @click="addToCart"
             class="info__add"
+            @click="addToCart"
           />
           <Button
             :icon="isFav ? 'pi pi-heart-fill' : 'pi pi-heart'"
             severity="secondary"
             outlined
             size="large"
-            @click="toggleFav"
             aria-label="В избранное"
+            @click="toggleFav"
           />
         </div>
 
-        <div class="info__rate" v-if="auth.isAuthenticated">
+        <div v-if="auth.isAuthenticated" class="info__rate">
           <h4>Оцените букет</h4>
-          <StarRating :modelValue="myStars" @update:modelValue="setRating" size="lg" />
+          <StarRating :model-value="myStars" size="lg" @update:model-value="setRating" />
         </div>
 
         <div class="info__description">

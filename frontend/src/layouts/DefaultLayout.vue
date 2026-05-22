@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref, useTemplateRef, watch } from "vue";
 import { RouterLink, useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useCartStore } from "@/stores/cart";
@@ -12,7 +12,7 @@ const favorites = useFavoritesStore();
 const router = useRouter();
 const route = useRoute();
 
-const userMenu = ref(null);
+const userMenu = useTemplateRef("userMenu");
 const mobileNavOpen = ref(false);
 
 watch(() => route.fullPath, () => {
@@ -35,10 +35,8 @@ const userMenuItems = [
     icon: "pi pi-sign-out",
     command: () => {
       auth.logout();
-      cart.items = [];
-      cart.count = 0;
-      cart.total = 0;
-      favorites.ids = [];
+      cart.reset();
+      favorites.reset();
       router.push("/");
     },
   },
@@ -48,15 +46,25 @@ function toggleUserMenu(e) {
   userMenu.value.toggle(e);
 }
 
-onMounted(async () => {
-  if (auth.token && !auth.user) {
-    await auth.fetchMe();
-  }
+onMounted(() => {
   if (auth.isAuthenticated) {
-    cart.fetch();
-    favorites.fetchIds();
+    cart.load();
+    favorites.load();
   }
 });
+
+watch(
+  () => auth.isAuthenticated,
+  (loggedIn) => {
+    if (loggedIn) {
+      cart.load();
+      favorites.load();
+    } else {
+      cart.reset();
+      favorites.reset();
+    }
+  },
+);
 </script>
 
 <template>
