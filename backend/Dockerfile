@@ -12,7 +12,6 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 COPY backend/ .
-COPY migration/ ../migration/
 RUN chmod +x entrypoint.sh
 
 EXPOSE 5050

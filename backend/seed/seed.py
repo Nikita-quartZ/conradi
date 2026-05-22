@@ -5,9 +5,7 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REBUILD_ROOT = SCRIPT_DIR.parent
-_candidates = [Path("/app"), REBUILD_ROOT / "backend"]
-BACKEND_DIR = next((p for p in _candidates if (p / "app" / "__init__.py").exists()), _candidates[-1])
+BACKEND_DIR = SCRIPT_DIR.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
 os.chdir(BACKEND_DIR)
@@ -17,11 +15,9 @@ from app.extensions import db  # noqa: E402
 from app.models import Category, ProductType, Product, Image  # noqa: E402
 
 
-OLD_DUMP = Path(os.getenv("OLD_DUMP_PATH", SCRIPT_DIR / "dump.sql"))
-DEFAULT_IMG_DIR = SCRIPT_DIR / "img"
-LEGACY_IMG_DIR = REBUILD_ROOT.parent / "conradi" / "web" / "img"
-OLD_IMG_DIR = Path(os.getenv("OLD_IMG_DIR", DEFAULT_IMG_DIR if DEFAULT_IMG_DIR.exists() else LEGACY_IMG_DIR))
-NEW_IMG_DIR = Path(os.getenv("UPLOAD_FOLDER", BACKEND_DIR / "uploads" / "products"))
+DATA_FILE = Path(os.getenv("SEED_DATA", SCRIPT_DIR / "data.sql"))
+IMAGES_DIR = Path(os.getenv("SEED_IMAGES", SCRIPT_DIR / "images"))
+UPLOAD_DIR = Path(os.getenv("UPLOAD_FOLDER", BACKEND_DIR / "uploads" / "products"))
 
 
 TRANSLIT = {
@@ -152,15 +148,15 @@ def row_dict(cols, row):
     return dict(zip(cols, row))
 
 
-def migrate():
-    if not OLD_DUMP.exists():
-        print(f"Дамп не найден: {OLD_DUMP}")
+def seed():
+    if not DATA_FILE.exists():
+        print(f"Файл seed-данных не найден: {DATA_FILE}")
         sys.exit(1)
-    if not OLD_IMG_DIR.exists():
-        print(f"Папка с картинками не найдена: {OLD_IMG_DIR}")
-        print("Товары перенесём, но без картинок.")
+    if not IMAGES_DIR.exists():
+        print(f"Папка с картинками не найдена: {IMAGES_DIR}")
+        print("Каталог будет заполнен без картинок.")
 
-    sql = OLD_DUMP.read_text(encoding="utf-8")
+    sql = DATA_FILE.read_text(encoding="utf-8")
 
     parsed = {}
     for table, cols, rows in parse_inserts(sql):
@@ -170,7 +166,7 @@ def migrate():
     app = create_app()
     with app.app_context():
         if Category.query.first() or Product.query.first():
-            print("База уже заполнена, миграция пропущена.")
+            print("База уже заполнена, сидинг пропущен.")
             return
 
         slug_used = set()
@@ -212,24 +208,24 @@ def migrate():
         db.session.flush()
         print(f"Товаров: {len(p_rows)}")
 
-        NEW_IMG_DIR.mkdir(parents=True, exist_ok=True)
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         copied = 0
-        if OLD_IMG_DIR.exists():
+        if IMAGES_DIR.exists():
             def is_product_photo(f):
                 if not (f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png")):
                     return False
                 parts = f.stem.split("_", 1)
                 return len(parts) == 2 and parts[0].isdigit() and len(parts[0]) >= 8
 
-            fresh = sorted(f for f in OLD_IMG_DIR.iterdir()
+            fresh = sorted(f for f in IMAGES_DIR.iterdir()
                            if is_product_photo(f) and f.name.startswith("1769"))
-            legacy = sorted(f for f in OLD_IMG_DIR.iterdir()
+            legacy = sorted(f for f in IMAGES_DIR.iterdir()
                             if is_product_photo(f) and not f.name.startswith("1769"))
             available = fresh + legacy
 
             products_sorted = sorted(Product.query.all(), key=lambda p: p.id)
             for prod, src in zip(products_sorted, available):
-                shutil.copy2(src, NEW_IMG_DIR / src.name)
+                shutil.copy2(src, UPLOAD_DIR / src.name)
                 db.session.add(
                     Image(product_id=prod.id, filename=src.name, sort_order=0)
                 )
@@ -239,8 +235,8 @@ def migrate():
                 print(f"{extra} товар(ов) остались без картинки — файлов в папке меньше")
         db.session.commit()
         print(f"Картинок скопировано: {copied}")
-        print("Миграция завершена.")
+        print("Сидинг завершён.")
 
 
 if __name__ == "__main__":
-    migrate()
+    seed()
