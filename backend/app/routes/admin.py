@@ -15,6 +15,7 @@ from ..models import (
     Image,
     Order,
     User,
+    Review,
     ORDER_STATUSES,
 )
 from ..schemas import (
@@ -27,6 +28,11 @@ from ..schemas import (
     OrderOut,
     AdminStatusUpdate,
     UserOut,
+    UserUpdate,
+    AdminRoleUpdate,
+    ReviewOut,
+    AdminReviewIn,
+    AdminReviewPatch,
 )
 
 bp = Blueprint("admin", __name__)
@@ -40,6 +46,18 @@ product_out = ProductOut()
 order_out = OrderOut()
 status_update = AdminStatusUpdate()
 user_out = UserOut()
+user_update_schema = UserUpdate()
+role_update_schema = AdminRoleUpdate()
+review_out = ReviewOut()
+admin_review_in = AdminReviewIn()
+admin_review_patch = AdminReviewPatch()
+
+
+SUPER_ADMIN_LOGIN = "admin"
+
+
+def _is_super_admin(user):
+    return user is not None and user.login == SUPER_ADMIN_LOGIN
 
 
 def _allowed_file(filename):
@@ -277,10 +295,23 @@ def delete_image(image_id):
     return jsonify(ok=True)
 
 
+SORT_COLUMNS = {
+    "created": Order.created_at,
+    "status": Order.status,
+    "delivery": Order.delivery_date,
+    "total": Order.total,
+}
+
+
 @bp.get("/orders")
 @admin_required
 def list_orders():
-    items = Order.query.order_by(Order.created_at.desc()).all()
+    sort_key = request.args.get("sort", "created")
+    order_dir = request.args.get("order", "desc")
+    column = SORT_COLUMNS.get(sort_key, Order.created_at)
+    expr = column.asc() if order_dir == "asc" else column.desc()
+
+    items = Order.query.order_by(expr).all()
     return jsonify(
         items=[
             {
@@ -347,4 +378,110 @@ def statuses():
 @admin_required
 def list_users():
     items = User.query.order_by(User.id).all()
-    return jsonify(items=[user_out.dump(u) for u in items])
+    return jsonify(
+        items=[
+            {**user_out.dump(u), "is_super_admin": _is_super_admin(u)}
+            for u in items
+        ]
+    )
+
+
+@bp.patch("/users/<int:uid>")
+@admin_required
+def update_user(uid):
+    user = db.session.get(User, uid)
+    if not user:
+        return jsonify(error="Пользователь не найден"), 404
+    try:
+        data = user_update_schema.load(request.get_json() or {}, partial=True)
+    except ValidationError as err:
+        return jsonify(errors=err.messages), 400
+    for field in ("full_name", "phone", "birthday"):
+        if field in data and data[field] is not None:
+            setattr(user, field, data[field])
+    db.session.commit()
+    return jsonify(user={**user_out.dump(user), "is_super_admin": _is_super_admin(user)})
+
+
+@bp.patch("/users/<int:uid>/role")
+@admin_required
+def change_user_role(uid):
+    user = db.session.get(User, uid)
+    if not user:
+        return jsonify(error="Пользователь не найден"), 404
+    if _is_super_admin(user):
+        return jsonify(error="Главного администратора нельзя изменить"), 403
+    try:
+        data = role_update_schema.load(request.get_json() or {})
+    except ValidationError as err:
+        return jsonify(errors=err.messages), 400
+    user.role = data["role"]
+    db.session.commit()
+    return jsonify(user={**user_out.dump(user), "is_super_admin": _is_super_admin(user)})
+
+
+@bp.get("/reviews")
+@admin_required
+def list_reviews():
+    items = Review.query.order_by(Review.created_at.desc()).all()
+    return jsonify(
+        items=[
+            {
+                **review_out.dump(r),
+                "product": {"id": r.product.id, "title": r.product.title},
+            }
+            for r in items
+        ]
+    )
+
+
+@bp.post("/reviews")
+@admin_required
+def create_review_admin():
+    try:
+        data = admin_review_in.load(request.get_json() or {})
+    except ValidationError as err:
+        return jsonify(errors=err.messages), 400
+    product = db.session.get(Product, data["product_id"])
+    if not product:
+        return jsonify(errors={"product_id": ["Товар не найден"]}), 400
+    review = Review(
+        product_id=data["product_id"],
+        user_id=None,
+        author_name=data["author_name"],
+        stars=data["stars"],
+        text=data["text"].strip(),
+        is_promoted=data["is_promoted"],
+    )
+    db.session.add(review)
+    db.session.commit()
+    return jsonify(review=review_out.dump(review)), 201
+
+
+@bp.patch("/reviews/<int:rid>")
+@admin_required
+def update_review(rid):
+    review = db.session.get(Review, rid)
+    if not review:
+        return jsonify(error="Отзыв не найден"), 404
+    try:
+        data = admin_review_patch.load(request.get_json() or {}, partial=True)
+    except ValidationError as err:
+        return jsonify(errors=err.messages), 400
+    if "is_hidden" in data:
+        review.is_hidden = data["is_hidden"]
+    if "is_promoted" in data:
+        review.is_promoted = data["is_promoted"]
+    db.session.commit()
+    return jsonify(review=review_out.dump(review))
+
+
+@bp.delete("/reviews/<int:rid>")
+@admin_required
+def delete_review(rid):
+    review = db.session.get(Review, rid)
+    if not review:
+        return jsonify(error="Отзыв не найден"), 404
+    db.session.delete(review)
+    db.session.commit()
+    return jsonify(ok=True)

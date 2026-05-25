@@ -4,6 +4,8 @@ import AdminOrders from "@/components/admin/AdminOrders.vue";
 import AdminProducts from "@/components/admin/AdminProducts.vue";
 import AdminCategories from "@/components/admin/AdminCategories.vue";
 import AdminTypes from "@/components/admin/AdminTypes.vue";
+import AdminUsers from "@/components/admin/AdminUsers.vue";
+import AdminReviews from "@/components/admin/AdminReviews.vue";
 
 const tab = useRouteQuery("tab", "orders");
 
@@ -12,6 +14,8 @@ const tabs = [
   { id: "products", label: "Товары", icon: "pi pi-tag" },
   { id: "categories", label: "Категории", icon: "pi pi-th-large" },
   { id: "types", label: "Типы", icon: "pi pi-bookmark" },
+  { id: "reviews", label: "Отзывы", icon: "pi pi-comment" },
+  { id: "users", label: "Пользователи", icon: "pi pi-users" },
 ];
 </script>
 
@@ -41,6 +45,8 @@ const tabs = [
         <AdminProducts v-if="tab === 'products'" />
         <AdminCategories v-if="tab === 'categories'" />
         <AdminTypes v-if="tab === 'types'" />
+        <AdminReviews v-if="tab === 'reviews'" />
+        <AdminUsers v-if="tab === 'users'" />
       </div>
     </div>
   </section>

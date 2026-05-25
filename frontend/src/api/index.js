@@ -4,6 +4,7 @@ export const authApi = {
   register: (payload) => client.post("/auth/register", payload),
   login: (payload) => client.post("/auth/login", payload),
   me: () => client.get("/auth/me"),
+  updateMe: (payload) => client.patch("/auth/me", payload),
 };
 
 export const catalogApi = {
@@ -18,6 +19,15 @@ export const ratingsApi = {
   set: (productId, stars) =>
     client.post(`/products/${productId}/rating`, { stars }),
   mine: (productId) => client.get(`/products/${productId}/rating/mine`),
+};
+
+export const reviewsApi = {
+  list: (productId) => client.get(`/products/${productId}/reviews`),
+  create: (productId, payload) =>
+    client.post(`/products/${productId}/reviews`, payload),
+  canLeave: (productId) =>
+    client.get(`/products/${productId}/reviews/can-leave`),
+  promoted: () => client.get("/reviews/promoted"),
 };
 
 export const cartApi = {
@@ -64,10 +74,17 @@ export const adminApi = {
     });
   },
   deleteImage: (imageId) => client.delete(`/admin/images/${imageId}`),
-  listOrders: () => client.get("/admin/orders"),
+  listOrders: (params) => client.get("/admin/orders", { params }),
   orderDetail: (id) => client.get(`/admin/orders/${id}`),
   changeStatus: (id, status) =>
     client.patch(`/admin/orders/${id}/status`, { status }),
   statuses: () => client.get("/admin/statuses"),
   listUsers: () => client.get("/admin/users"),
+  updateUser: (id, data) => client.patch(`/admin/users/${id}`, data),
+  changeUserRole: (id, role) =>
+    client.patch(`/admin/users/${id}/role`, { role }),
+  listReviews: () => client.get("/admin/reviews"),
+  createReview: (payload) => client.post("/admin/reviews", payload),
+  updateReview: (id, payload) => client.patch(`/admin/reviews/${id}`, payload),
+  deleteReview: (id) => client.delete(`/admin/reviews/${id}`),
 };

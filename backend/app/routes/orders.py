@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from flask import Blueprint, request, jsonify
@@ -29,6 +29,26 @@ def checkout():
     if data["delivery_date"] < date.today():
         return jsonify(errors={"delivery_date": ["Дата доставки в прошлом"]}), 400
 
+    try:
+        hour, minute = (int(p) for p in data["delivery_time"].split(":"))
+        delivery_at = datetime.combine(
+            data["delivery_date"], datetime.min.time()
+        ).replace(hour=hour, minute=minute)
+    except (ValueError, KeyError):
+        return jsonify(errors={"delivery_time": ["Неверный формат времени"]}), 400
+
+    if delivery_at < datetime.now() + timedelta(hours=1):
+        return (
+            jsonify(
+                errors={
+                    "delivery_time": [
+                        "Доставка возможна минимум через 1 час от текущего времени"
+                    ]
+                }
+            ),
+            400,
+        )
+
     uid = _user_id()
     cart = CartItem.query.filter_by(user_id=uid).all()
     if not cart:
@@ -50,6 +70,10 @@ def checkout():
 
     total = sum(it.quantity * it.product.price for it in cart)
 
+    comment = data.get("customer_comment")
+    if comment:
+        comment = comment.strip() or None
+
     order = Order(
         user_id=uid,
         total=total,
@@ -58,6 +82,7 @@ def checkout():
         status="created",
         delivery_date=data["delivery_date"],
         delivery_time=data["delivery_time"],
+        customer_comment=comment,
     )
     db.session.add(order)
     db.session.flush()

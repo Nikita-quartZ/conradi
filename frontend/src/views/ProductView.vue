@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, toRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { catalogApi, ratingsApi } from "@/api";
+import { catalogApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
 import { useFavoritesStore } from "@/stores/favorites";
 import { useCartStore } from "@/stores/cart";
@@ -9,6 +9,7 @@ import { useAsyncData } from "@/composables/useAsyncData";
 import { useFlash } from "@/composables/useFlash";
 import { formatPrice } from "@/utils/format";
 import StarRating from "@/components/StarRating.vue";
+import ProductReviews from "@/components/ProductReviews.vue";
 import Button from "primevue/button";
 import InputNumber from "primevue/inputnumber";
 import Message from "primevue/message";
@@ -24,19 +25,12 @@ const productId = toRef(() => route.params.id);
 
 const activeImage = ref(0);
 const quantity = ref(1);
-const myStars = ref(0);
 
 const { data: product, pending } = useAsyncData(
   async () => {
     const { data } = await catalogApi.product(productId.value);
     activeImage.value = 0;
     quantity.value = 1;
-    if (auth.isAuthenticated) {
-      const r = await ratingsApi.mine(data.product.id);
-      myStars.value = r.data.stars || 0;
-    } else {
-      myStars.value = 0;
-    }
     return data.product;
   },
   { watch: [productId], onError: () => null },
@@ -60,14 +54,6 @@ async function addToCart() {
 async function toggleFav() {
   if (!ensureAuth()) return;
   await favorites.toggle(product.value.id);
-}
-
-async function setRating(stars) {
-  if (!ensureAuth()) return;
-  myStars.value = stars;
-  const { data } = await ratingsApi.set(product.value.id, stars);
-  product.value.average_rating = data.average_rating;
-  flashSuccess("Спасибо за оценку!");
 }
 </script>
 
@@ -159,15 +145,12 @@ async function setRating(stars) {
           />
         </div>
 
-        <div v-if="auth.isAuthenticated" class="info__rate">
-          <h4>Оцените букет</h4>
-          <StarRating :model-value="myStars" size="lg" @update:model-value="setRating" />
-        </div>
-
         <div class="info__description">
           <h4>Описание</h4>
           <p>{{ product.description }}</p>
         </div>
+
+        <ProductReviews :product-id="product.id" />
       </div>
     </div>
   </section>
@@ -308,21 +291,6 @@ async function setRating(stars) {
     min-width: 200px;
   }
 
-  &__rate {
-    padding: 20px 24px;
-    background: var(--color-surface);
-    border-radius: var(--radius-lg);
-
-    h4 {
-      font-family: var(--font-body);
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--color-text-muted);
-      margin: 0 0 12px;
-    }
-  }
-
   &__description {
     padding: 24px 28px;
     background: var(--color-surface);
@@ -373,10 +341,6 @@ async function setRating(stars) {
 
     &__description {
       padding: 20px;
-    }
-
-    &__rate {
-      padding: 16px 20px;
     }
   }
 

@@ -27,6 +27,8 @@ def create_app(config_class=Config):
 
     with app.app_context():
         db.create_all()
+        from .migrations import auto_migrate
+        auto_migrate()
 
     from .routes.auth import bp as auth_bp
     from .routes.catalog import bp as catalog_bp
@@ -34,6 +36,7 @@ def create_app(config_class=Config):
     from .routes.favorites import bp as favorites_bp
     from .routes.ratings import bp as ratings_bp
     from .routes.orders import bp as orders_bp
+    from .routes.reviews import bp as reviews_bp
     from .routes.admin import bp as admin_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -42,6 +45,7 @@ def create_app(config_class=Config):
     app.register_blueprint(favorites_bp, url_prefix="/api/favorites")
     app.register_blueprint(ratings_bp, url_prefix="/api")
     app.register_blueprint(orders_bp, url_prefix="/api/orders")
+    app.register_blueprint(reviews_bp, url_prefix="/api")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
     @app.route("/api/health")

@@ -26,6 +26,12 @@ class UserOut(Schema):
     created_at = fields.DateTime()
 
 
+class UserUpdate(Schema):
+    full_name = fields.Str(validate=validate.Length(min=2, max=255))
+    phone = fields.Str(validate=validate.Length(min=5, max=50))
+    birthday = fields.Date()
+
+
 class CategoryOut(Schema):
     id = fields.Int()
     title = fields.Str()
@@ -97,6 +103,7 @@ class OrderOut(Schema):
     status_label = fields.Method("get_status_label")
     delivery_date = fields.Date()
     delivery_time = fields.Str()
+    customer_comment = fields.Str(allow_none=True)
     created_at = fields.DateTime()
     items = fields.Nested(OrderItemOut, many=True)
 
@@ -114,6 +121,9 @@ class CheckoutSchema(Schema):
         required=True,
         validate=validate.Regexp(r"^([01]\d|2[0-3]):[0-5]\d$"),
     )
+    customer_comment = fields.Str(
+        load_default=None, allow_none=True, validate=validate.Length(max=1000)
+    )
     card_number = fields.Str(load_default=None)
     card_holder = fields.Str(load_default=None)
     card_expiry = fields.Str(load_default=None)
@@ -122,6 +132,10 @@ class CheckoutSchema(Schema):
 
 class AdminStatusUpdate(Schema):
     status = fields.Str(required=True, validate=validate.OneOf(ORDER_STATUSES))
+
+
+class AdminRoleUpdate(Schema):
+    role = fields.Str(required=True, validate=validate.OneOf(ROLES))
 
 
 class CategoryIn(Schema):
@@ -144,3 +158,32 @@ class ProductIn(Schema):
 
 class RatingIn(Schema):
     stars = fields.Int(required=True, validate=validate.Range(min=1, max=5))
+
+
+class ReviewOut(Schema):
+    id = fields.Int()
+    product_id = fields.Int()
+    author_name = fields.Str()
+    stars = fields.Int()
+    text = fields.Str()
+    is_hidden = fields.Bool()
+    is_promoted = fields.Bool()
+    created_at = fields.DateTime()
+
+
+class ReviewIn(Schema):
+    stars = fields.Int(required=True, validate=validate.Range(min=1, max=5))
+    text = fields.Str(required=True, validate=validate.Length(min=3, max=2000))
+
+
+class AdminReviewIn(Schema):
+    product_id = fields.Int(required=True)
+    author_name = fields.Str(required=True, validate=validate.Length(min=2, max=255))
+    stars = fields.Int(required=True, validate=validate.Range(min=1, max=5))
+    text = fields.Str(required=True, validate=validate.Length(min=3, max=2000))
+    is_promoted = fields.Bool(load_default=True)
+
+
+class AdminReviewPatch(Schema):
+    is_hidden = fields.Bool()
+    is_promoted = fields.Bool()

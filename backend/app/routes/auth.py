@@ -5,12 +5,13 @@ from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
 from ..models import User
-from ..schemas import RegisterSchema, LoginSchema, UserOut
+from ..schemas import RegisterSchema, LoginSchema, UserOut, UserUpdate
 
 bp = Blueprint("auth", __name__)
 
 register_schema = RegisterSchema()
 login_schema = LoginSchema()
+user_update_schema = UserUpdate()
 user_out = UserOut()
 
 
@@ -70,4 +71,24 @@ def me():
     user = User.query.get(int(user_id))
     if not user:
         return jsonify(error="Пользователь не найден"), 404
+    return jsonify(user=user_out.dump(user))
+
+
+@bp.patch("/me")
+@jwt_required()
+def update_me():
+    try:
+        data = user_update_schema.load(request.get_json() or {}, partial=True)
+    except ValidationError as err:
+        return jsonify(errors=err.messages), 400
+
+    user = User.query.get(int(get_jwt_identity()))
+    if not user:
+        return jsonify(error="Пользователь не найден"), 404
+
+    for field in ("full_name", "phone", "birthday"):
+        if field in data and data[field] is not None:
+            setattr(user, field, data[field])
+
+    db.session.commit()
     return jsonify(user=user_out.dump(user))

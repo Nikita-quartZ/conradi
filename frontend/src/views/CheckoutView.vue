@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref, onMounted } from "vue";
+import { computed, reactive, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCartStore } from "@/stores/cart";
 import { ordersApi } from "@/api";
@@ -10,6 +10,7 @@ import {
   formatCardExpiry,
 } from "@/utils/format";
 import InputText from "primevue/inputtext";
+import Textarea from "primevue/textarea";
 import DatePicker from "primevue/datepicker";
 import Button from "primevue/button";
 import Message from "primevue/message";
@@ -23,6 +24,7 @@ const form = reactive({
   pay_method: "cash",
   delivery_date: null,
   delivery_time: "12:00",
+  customer_comment: "",
   card_number: "",
   card_holder: "",
   card_expiry: "",
@@ -34,7 +36,42 @@ const error = ref(null);
 const fieldErrors = ref({});
 
 const today = new Date();
+today.setHours(0, 0, 0, 0);
 const maxDate = new Date(today.getTime() + 90 * 24 * 3600 * 1000);
+
+const ALL_SLOTS = (() => {
+  const slots = [];
+  for (let h = 9; h <= 20; h++) {
+    for (const m of [0, 15, 30, 45]) {
+      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    }
+  }
+  slots.push("21:00");
+  return slots;
+})();
+
+function slotsForDate(date) {
+  if (!date) return ALL_SLOTS;
+  const sameDay =
+    date.getFullYear() === new Date().getFullYear() &&
+    date.getMonth() === new Date().getMonth() &&
+    date.getDate() === new Date().getDate();
+  if (!sameDay) return ALL_SLOTS;
+  const cutoff = new Date(Date.now() + 60 * 60 * 1000);
+  return ALL_SLOTS.filter((slot) => {
+    const [h, m] = slot.split(":").map(Number);
+    const slotDate = new Date();
+    slotDate.setHours(h, m, 0, 0);
+    return slotDate >= cutoff;
+  });
+}
+
+function nextValidDate() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+  return tomorrow;
+}
 
 const cardNumber = computed({
   get: () => form.card_number,
@@ -46,16 +83,23 @@ const cardExpiry = computed({
   set: (v) => (form.card_expiry = formatCardExpiry(v)),
 });
 
-const timeSlots = computed(() => {
-  const slots = [];
-  for (let h = 9; h <= 20; h++) {
-    for (const m of [0, 15, 30, 45]) {
-      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+const timeSlots = computed(() => slotsForDate(form.delivery_date));
+
+watch(
+  () => form.delivery_date,
+  (date) => {
+    if (!date) return;
+    const slots = slotsForDate(date);
+    if (slots.length === 0) {
+      form.delivery_date = nextValidDate();
+      return;
     }
-  }
-  slots.push("21:00");
-  return slots;
-});
+    if (!slots.includes(form.delivery_time)) {
+      form.delivery_time = slots[0];
+    }
+  },
+  { immediate: false },
+);
 
 async function submit() {
   error.value = null;
@@ -67,6 +111,7 @@ async function submit() {
       pay_method: form.pay_method,
       delivery_date: toIsoDate(form.delivery_date),
       delivery_time: form.delivery_time,
+      customer_comment: form.customer_comment || null,
     };
     if (form.pay_method === "card") {
       payload.card_number = form.card_number;
@@ -91,6 +136,15 @@ onMounted(async () => {
   await cart.load();
   if (!cart.items.length) {
     router.replace("/cart");
+    return;
+  }
+  const todaySlots = slotsForDate(new Date());
+  if (todaySlots.length === 0) {
+    form.delivery_date = nextValidDate();
+    form.delivery_time = ALL_SLOTS[0];
+  } else {
+    form.delivery_date = new Date();
+    form.delivery_time = todaySlots.includes("12:00") ? "12:00" : todaySlots[0];
   }
 });
 </script>
@@ -133,7 +187,20 @@ onMounted(async () => {
               <select id="ch-time" v-model="form.delivery_time" class="time-select">
                 <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
               </select>
+              <small v-if="fieldErrors.delivery_time">{{ fieldErrors.delivery_time[0] }}</small>
             </div>
+          </div>
+
+          <div class="field">
+            <label for="ch-comment">Комментарий курьеру (необязательно)</label>
+            <Textarea
+              id="ch-comment"
+              v-model="form.customer_comment"
+              rows="3"
+              autoResize
+              maxlength="1000"
+              placeholder="Код домофона, этаж, пожелания к букету..."
+            />
           </div>
         </section>
 

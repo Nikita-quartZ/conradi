@@ -1,6 +1,7 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
+import ConfirmationService from "primevue/confirmationservice";
 import Aura from "@primevue/themes/aura";
 
 import App from "./App.vue";
@@ -27,6 +28,7 @@ async function bootstrap() {
       },
     },
   });
+  app.use(ConfirmationService);
 
   app.mount("#app");
 }

@@ -1,8 +1,9 @@
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
-import { catalogApi } from "@/api";
+import { catalogApi, reviewsApi } from "@/api";
 import { useAsyncData } from "@/composables/useAsyncData";
+import StarRating from "@/components/StarRating.vue";
 import Button from "primevue/button";
 
 const router = useRouter();
@@ -60,8 +61,14 @@ const { data: heroImages } = useAsyncData(
   { initialValue: [] },
 );
 
+const { data: promotedReviews } = useAsyncData(
+  () => reviewsApi.promoted().then((r) => r.data.items),
+  { initialValue: [] },
+);
+
 const categoriesList = computed(() => categories.value ?? []);
 const heroList = computed(() => heroImages.value ?? []);
+const reviewsList = computed(() => promotedReviews.value ?? []);
 
 function openCatalog(categoryId) {
   router.push({ path: "/catalog", query: categoryId ? { category: categoryId } : {} });
@@ -126,6 +133,25 @@ function openCatalog(categoryId) {
               Смотреть <i class="pi pi-arrow-right" />
             </span>
           </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section v-if="reviewsList.length" class="reviews-home">
+    <div class="container">
+      <header class="section-head">
+        <h2>Отзывы наших клиентов</h2>
+        <p>Тёплые слова, которые мы получаем каждый день</p>
+      </header>
+      <div class="reviews-home__grid">
+        <article v-for="r in reviewsList" :key="r.id" class="review-card">
+          <StarRating :model-value="r.stars" readonly size="md" />
+          <p class="review-card__text">{{ r.text }}</p>
+          <footer>
+            <strong>{{ r.author_name }}</strong>
+            <span v-if="r.product">о&nbsp;букете «{{ r.product.title }}»</span>
+          </footer>
         </article>
       </div>
     </div>
@@ -318,6 +344,49 @@ function openCatalog(categoryId) {
     i {
       transition: transform 0.2s ease;
       font-size: 0.8rem;
+    }
+  }
+}
+
+.reviews-home {
+  padding: 96px 0;
+  background: var(--color-surface);
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+  }
+}
+
+.review-card {
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-lg);
+  padding: 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  &__text {
+    margin: 0;
+    line-height: 1.6;
+    color: var(--color-text);
+  }
+
+  footer {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.9rem;
+
+    strong {
+      color: var(--color-text);
+    }
+
+    span {
+      color: var(--color-text-muted);
+      font-size: 0.85rem;
     }
   }
 }

@@ -5,6 +5,8 @@ import { useAuthStore } from "@/stores/auth";
 import { useCartStore } from "@/stores/cart";
 import { useFavoritesStore } from "@/stores/favorites";
 import Menu from "primevue/menu";
+import ConfirmDialog from "primevue/confirmdialog";
+import CookieBanner from "@/components/CookieBanner.vue";
 
 const auth = useAuthStore();
 const cart = useCartStore();
@@ -115,6 +117,13 @@ watch(
           </template>
           <template v-else>
             <RouterLink to="/login" class="header__login">Войти</RouterLink>
+            <RouterLink
+              to="/login"
+              class="header__icon header__login-icon"
+              aria-label="Войти"
+            >
+              <i class="pi pi-sign-in" />
+            </RouterLink>
             <RouterLink to="/register" class="header__register">Регистрация</RouterLink>
           </template>
         </div>
@@ -143,8 +152,16 @@ watch(
           <a href="mailto:hello@conradi.ru">hello@conradi.ru</a>
         </div>
       </div>
-      <div class="footer__bottom container">© 2026 Conradi</div>
+      <div class="footer__bottom container">
+        <span>© 2026 Conradi</span>
+        <RouterLink to="/privacy" class="footer__bottom-link">
+          Политика конфиденциальности
+        </RouterLink>
+      </div>
     </footer>
+
+    <CookieBanner />
+    <ConfirmDialog />
   </div>
 </template>
 
@@ -380,6 +397,19 @@ watch(
     padding-top: 24px;
     color: var(--color-text-muted);
     font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    &-link {
+      color: var(--color-text-muted);
+
+      &:hover {
+        color: var(--color-primary);
+      }
+    }
   }
 }
 
@@ -485,6 +515,10 @@ watch(
       }
     }
 
+    &__login-icon {
+      display: none;
+    }
+
     &__badge {
       top: 2px;
       right: 2px;
@@ -523,6 +557,10 @@ watch(
 
     &__login {
       display: none;
+    }
+
+    &__login-icon {
+      display: inline-flex;
     }
   }
 }

@@ -1,11 +1,62 @@
 <script setup>
+import { computed, reactive, ref } from "vue";
 import { useRouter, RouterLink } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { formatDate } from "@/utils/format";
+import { useFlash } from "@/composables/useFlash";
+import { formatDate, toIsoDate } from "@/utils/format";
+import InputText from "primevue/inputtext";
+import DatePicker from "primevue/datepicker";
 import Button from "primevue/button";
+import Message from "primevue/message";
 
 const auth = useAuthStore();
 const router = useRouter();
+const { message: flashMessage, success: flashSuccess, error: flashError } = useFlash();
+
+const editing = ref(false);
+const saving = ref(false);
+const fieldErrors = ref({});
+
+const form = reactive({
+  full_name: "",
+  phone: "",
+  birthday: null,
+});
+
+const birthdayDate = computed(() => (auth.user?.birthday ? new Date(auth.user.birthday) : null));
+
+function startEdit() {
+  form.full_name = auth.user?.full_name ?? "";
+  form.phone = auth.user?.phone ?? "";
+  form.birthday = birthdayDate.value;
+  fieldErrors.value = {};
+  editing.value = true;
+}
+
+function cancelEdit() {
+  editing.value = false;
+  fieldErrors.value = {};
+}
+
+async function save() {
+  saving.value = true;
+  fieldErrors.value = {};
+  try {
+    await auth.updateProfile({
+      full_name: form.full_name,
+      phone: form.phone,
+      birthday: toIsoDate(form.birthday),
+    });
+    flashSuccess("Данные сохранены");
+    editing.value = false;
+  } catch (err) {
+    const payload = err.response?.data;
+    if (payload?.errors) fieldErrors.value = payload.errors;
+    else flashError(payload?.error || "Не удалось сохранить");
+  } finally {
+    saving.value = false;
+  }
+}
 
 function logout() {
   auth.logout();
@@ -33,32 +84,79 @@ function logout() {
 
       <div class="account__main">
         <h1>Личный кабинет</h1>
+
+        <Message v-if="flashMessage" :severity="flashMessage.severity" :closable="false">
+          {{ flashMessage.text }}
+        </Message>
+
         <div class="account__card">
-          <h3>Контакты</h3>
-          <div class="account__row">
-            <span>Имя</span>
-            <strong>{{ auth.user?.full_name }}</strong>
-          </div>
-          <div class="account__row">
-            <span>Логин</span>
-            <strong>{{ auth.user?.login }}</strong>
-          </div>
-          <div class="account__row">
-            <span>Телефон</span>
-            <strong>{{ auth.user?.phone }}</strong>
-          </div>
-          <div class="account__row">
-            <span>Дата рождения</span>
-            <strong>{{ formatDate(auth.user?.birthday) }}</strong>
-          </div>
-          <div class="account__row">
-            <span>Зарегистрирован</span>
-            <strong>{{ formatDate(auth.user?.created_at) }}</strong>
-          </div>
-          <div v-if="auth.isAdmin" class="account__row">
-            <span>Роль</span>
-            <strong>Администратор</strong>
-          </div>
+          <header class="account__card-head">
+            <h3>Контакты</h3>
+            <Button
+              v-if="!editing"
+              label="Редактировать"
+              icon="pi pi-pencil"
+              text
+              size="small"
+              @click="startEdit"
+            />
+          </header>
+
+          <template v-if="!editing">
+            <div class="account__row">
+              <span>Имя</span>
+              <strong>{{ auth.user?.full_name }}</strong>
+            </div>
+            <div class="account__row">
+              <span>Логин</span>
+              <strong>{{ auth.user?.login }}</strong>
+            </div>
+            <div class="account__row">
+              <span>Телефон</span>
+              <strong>{{ auth.user?.phone }}</strong>
+            </div>
+            <div class="account__row">
+              <span>Дата рождения</span>
+              <strong>{{ formatDate(auth.user?.birthday) }}</strong>
+            </div>
+            <div class="account__row">
+              <span>Зарегистрирован</span>
+              <strong>{{ formatDate(auth.user?.created_at) }}</strong>
+            </div>
+            <div v-if="auth.isAdmin" class="account__row">
+              <span>Роль</span>
+              <strong>Администратор</strong>
+            </div>
+          </template>
+
+          <form v-else class="account__form" @submit.prevent="save">
+            <div class="account__field">
+              <label for="acc-name">Имя и фамилия</label>
+              <InputText id="acc-name" v-model="form.full_name" />
+              <small v-if="fieldErrors.full_name">{{ fieldErrors.full_name[0] }}</small>
+            </div>
+            <div class="account__field">
+              <label for="acc-phone">Телефон</label>
+              <InputText id="acc-phone" v-model="form.phone" />
+              <small v-if="fieldErrors.phone">{{ fieldErrors.phone[0] }}</small>
+            </div>
+            <div class="account__field">
+              <label for="acc-birthday">Дата рождения</label>
+              <DatePicker
+                input-id="acc-birthday"
+                v-model="form.birthday"
+                date-format="dd.mm.yy"
+                show-icon
+                fluid
+                :max-date="new Date()"
+              />
+              <small v-if="fieldErrors.birthday">{{ fieldErrors.birthday[0] }}</small>
+            </div>
+            <div class="account__actions">
+              <Button type="submit" label="Сохранить" :loading="saving" />
+              <Button label="Отмена" severity="secondary" text @click="cancelEdit" />
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -150,8 +248,51 @@ function logout() {
 
     h3 {
       font-size: 1.3rem;
-      margin: 0 0 20px;
+      margin: 0;
     }
+  }
+
+  &__card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    label {
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+    }
+
+    small {
+      color: var(--danger, #b85c5c);
+      font-size: 0.8rem;
+    }
+
+    :deep(.p-inputtext),
+    :deep(.p-datepicker) {
+      width: 100%;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
   }
 
   &__row {

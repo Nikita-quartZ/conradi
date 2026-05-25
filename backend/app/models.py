@@ -96,9 +96,10 @@ class Product(db.Model):
 
     @property
     def average_rating(self):
-        if not self.ratings:
+        visible = [r for r in self.reviews if not r.is_hidden]
+        if not visible:
             return 0.0
-        return round(sum(r.stars for r in self.ratings) / len(self.ratings), 1)
+        return round(sum(r.stars for r in visible) / len(visible), 1)
 
     @property
     def in_stock(self):
@@ -112,6 +113,26 @@ class Image(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=False, index=True)
     filename = db.Column(db.String(255), nullable=False)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+
+class Review(db.Model):
+    __tablename__ = "review"
+    __table_args__ = (
+        UniqueConstraint("user_id", "product_id", name="uq_review_user_product"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    author_name = db.Column(db.String(255), nullable=False)
+    stars = db.Column(db.Integer, nullable=False)
+    text = db.Column(db.Text, nullable=False, default="")
+    is_hidden = db.Column(db.Boolean, nullable=False, default=False)
+    is_promoted = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, server_default=func.now(), nullable=False)
+
+    product = db.relationship("Product", backref=db.backref("reviews", cascade="all, delete-orphan"))
+    user = db.relationship("User")
 
 
 class Rating(db.Model):
@@ -160,6 +181,7 @@ class Order(db.Model):
     status = db.Column(db.String(32), nullable=False, default="created")
     delivery_date = db.Column(db.Date, nullable=False)
     delivery_time = db.Column(db.String(5), nullable=False)
+    customer_comment = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=func.now(), nullable=False)
 
     items = db.relationship(

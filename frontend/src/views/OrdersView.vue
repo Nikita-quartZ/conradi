@@ -84,6 +84,11 @@ const countLabel = computed(() => {
             </div>
           </div>
 
+          <div v-if="o.customer_comment" class="order__comment">
+            <span>Комментарий</span>
+            <p>{{ o.customer_comment }}</p>
+          </div>
+
           <div class="order__footer">
             <span class="order__date">{{ formatDateTime(o.created_at) }}</span>
             <span class="order__total">{{ formatPrice(o.total) }}</span>
@@ -240,6 +245,28 @@ const countLabel = computed(() => {
     align-items: center;
     padding-top: 16px;
     border-top: 1px solid var(--color-border);
+  }
+
+  &__comment {
+    background: var(--color-secondary);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+
+    span {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-text-muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    p {
+      margin: 0;
+      white-space: pre-line;
+      line-height: 1.5;
+    }
   }
 
   &__date {
