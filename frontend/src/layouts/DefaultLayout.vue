@@ -327,6 +327,10 @@ watch(
     }
   }
 
+  &__login-icon {
+    display: none;
+  }
+
   &__register {
     background: var(--color-primary);
     color: #fff;
@@ -513,10 +517,6 @@ watch(
       i {
         font-size: 1rem;
       }
-    }
-
-    &__login-icon {
-      display: none;
     }
 
     &__badge {
